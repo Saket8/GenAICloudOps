@@ -6,8 +6,6 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.database import get_async_session
 from app.services.cache_service import cache_service
 from app.core.config import settings
 

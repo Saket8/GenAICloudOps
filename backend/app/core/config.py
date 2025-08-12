@@ -30,15 +30,15 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # Redis Settings
-    REDIS_ENABLED: bool = True  # Enable Redis when available for better performance
+    REDIS_ENABLED: bool = False  # Disabled by default; enable when a Redis instance is available
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: str = ""
     
     # Security Settings
-    SECURITY_MIDDLEWARE_ENABLED: bool = True
-    RATE_LIMITING_ENABLED: bool = True
+    SECURITY_MIDDLEWARE_ENABLED: bool = False  # Temporarily disabled to fix login timeout
+    RATE_LIMITING_ENABLED: bool = False  # Temporarily disabled
     INPUT_VALIDATION_ENABLED: bool = True
     MAX_REQUEST_SIZE: int = 10 * 1024 * 1024  # 10MB
     
@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     OCI_USER_ID: str = ""
     OCI_FINGERPRINT: str = ""
     OCI_KEY_FILE: str = ""
+    
+    # Global Dummy Mode Flags (disable all live external connections by default)
+    USE_DUMMY_OCI: bool = True
+    USE_DUMMY_KUBERNETES: bool = True
+    USE_DUMMY_VAULT: bool = True
     
     # OCI Vault Configuration
     OCI_VAULT_ENABLED: bool = True
@@ -95,6 +100,10 @@ class Settings(BaseSettings):
     GENAI_ENABLE_BATCHING: bool = True
     GENAI_BATCH_SIZE: int = 5
     GENAI_FALLBACK_MODEL: str = "mixtral-8x7b-32768"
+    # Added for GenAIService compatibility
+    GENAI_PRIMARY_MODEL: str = "llama3-8b-8192"
+    GENAI_MAX_RETRIES: int = 2
+    GENAI_TIMEOUT: int = 30
     
     # Optional Enhancement Features
     

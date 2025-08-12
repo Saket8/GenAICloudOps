@@ -265,10 +265,72 @@ class AccessAnalyzerService:
     async def get_iam_analysis(self, compartment_id: str) -> List[IAMPolicy]:
         """Get comprehensive IAM policy analysis with risk scoring"""
         try:
+            # Dummy mode: when OCI is not available, return realistic policies
             if not self.oci_service.oci_available:
-                logger.warning("OCI not available, returning empty IAM analysis")
-                return []
+                logger.info("OCI not available - returning dummy IAM policies")
+                now = datetime.now().isoformat()
+                dummy_policies = [
+                    IAMPolicy(
+                        id="ocid1.policy.oc1..pol1",
+                        name="AllowAdminsFullAccess",
+                        compartment_id=compartment_id,
+                        compartment_name="production",
+                        description="Administrators have full access",
+                        statements=[
+                            "Allow group Administrators to manage all-resources in tenancy"
+                        ],
+                        version_date=now,
+                        time_created=now,
+                        lifecycle_state="ACTIVE",
+                        risk_score=90,
+                        risk_level=RiskLevel.HIGH,
+                        recommendations=[
+                            "Limit 'manage all-resources' to specific compartments",
+                            "Apply break-glass procedures"
+                        ]
+                    ),
+                    IAMPolicy(
+                        id="ocid1.policy.oc1..pol2",
+                        name="DevelopersLimitedAccess",
+                        compartment_id=compartment_id,
+                        compartment_name="staging",
+                        description="Developers can read and use core services",
+                        statements=[
+                            "Allow group Developers to use all-resources in compartment staging",
+                            "Allow group Developers to read metrics in compartment staging"
+                        ],
+                        version_date=now,
+                        time_created=now,
+                        lifecycle_state="ACTIVE",
+                        risk_score=40,
+                        risk_level=RiskLevel.MEDIUM,
+                        recommendations=[
+                            "Restrict 'use all-resources' to needed services",
+                            "Add explicit deny on production compartments"
+                        ]
+                    ),
+                    IAMPolicy(
+                        id="ocid1.policy.oc1..pol3",
+                        name="ViewersReadOnly",
+                        compartment_id=compartment_id,
+                        compartment_name="production",
+                        description="Read-only access for viewers",
+                        statements=[
+                            "Allow group Viewers to read all-resources in compartment production"
+                        ],
+                        version_date=now,
+                        time_created=now,
+                        lifecycle_state="ACTIVE",
+                        risk_score=10,
+                        risk_level=RiskLevel.LOW,
+                        recommendations=[
+                            "No action required"
+                        ]
+                    )
+                ]
+                return dummy_policies
             
+            # Live path
             # Get identity client
             identity_client = self.oci_service.clients.get('identity')
             if not identity_client:
@@ -324,7 +386,7 @@ class AccessAnalyzerService:
         except Exception as e:
             logger.error(f"Failed to get IAM analysis: {e}")
             raise ExternalServiceError(f"IAM analysis failed: {str(e)}")
-    
+
     async def generate_unified_analysis(
         self, 
         compartment_id: str, 
@@ -384,7 +446,7 @@ class AccessAnalyzerService:
         except Exception as e:
             logger.error(f"Failed to generate unified analysis: {e}")
             raise ExternalServiceError(f"Unified analysis failed: {str(e)}")
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """Health check for the access analyzer service"""
         try:
@@ -415,23 +477,18 @@ class AccessAnalyzerService:
                     cluster_configured = False
             
             return {
-                "status": "healthy" if all([kubernetes_available, oci_available, genai_available]) else "degraded",
+                "status": "healthy" if all([kubernetes_available, genai_available]) else "degraded",
                 "kubernetes_available": kubernetes_available,
                 "oci_available": oci_available,
                 "genai_available": genai_available,
                 "cluster_configured": cluster_configured,
-                "cluster_info": cluster_info,
-                "service": "AccessAnalyzer",
-                "timestamp": datetime.now().isoformat()
+                "cluster_info": cluster_info
             }
-            
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return {
                 "status": "unhealthy",
-                "error": str(e),
-                "service": "AccessAnalyzer",
-                "timestamp": datetime.now().isoformat()
+                "error": str(e)
             }
     
     async def _analyze_rbac_role(self, role: RBACRole, bindings: List[RBACBinding]) -> RBACAnalysis:

@@ -87,11 +87,11 @@ class OCIVaultService:
         self.vault_id = getattr(settings, 'OCI_VAULT_ID', '')
         self.kms_key_id = getattr(settings, 'OCI_KMS_KEY_ID', '')
         
-        # Initialize OCI clients if available
-        if OCI_AVAILABLE:
+        # Initialize OCI clients if available and not in dummy mode
+        if OCI_AVAILABLE and not getattr(settings, 'USE_DUMMY_VAULT', False):
             self._initialize_clients()
         else:
-            self.logger.warning("OCI SDK not available. Using mock implementation.")
+            self.logger.warning("Using mock vault implementation (OCI disabled or USE_DUMMY_VAULT=True).")
     
     def _initialize_clients(self):
         """Initialize OCI clients with proper authentication"""

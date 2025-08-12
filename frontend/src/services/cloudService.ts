@@ -76,8 +76,48 @@ const cloudApi = {
   // Get all resources in a compartment
   getAllResources: async (compartmentId: string, resourceFilter?: string[]): Promise<AllResourcesResponse> => {
     const params = resourceFilter ? { resource_filter: resourceFilter.join(',') } : {};
-    const response = await api.get<AllResourcesResponse>(`/cloud/compartments/${compartmentId}/resources`, { params });
-    return response.data;
+    try {
+      const response = await api.get<AllResourcesResponse>(`/cloud/compartments/${compartmentId}/resources`, { params });
+      return response.data;
+    } catch (error: any) {
+      // Development fallback to prevent dashboard from breaking on 401 or missing mocks
+      if (import.meta && (import.meta as any).env && (import.meta as any).env.DEV) {
+        const now = new Date().toISOString();
+        const dummy: AllResourcesResponse = {
+          compartment_id: compartmentId,
+          resources: {
+            compute_instances: [
+              { id: 'ocid1.instance.oc1..r1', display_name: 'web-server-1', lifecycle_state: 'RUNNING', resource_type: 'compute', compartment_id: compartmentId, time_created: now },
+              { id: 'ocid1.instance.oc1..r2', display_name: 'db-worker', lifecycle_state: 'STOPPED', resource_type: 'compute', compartment_id: compartmentId, time_created: now }
+            ],
+            databases: [
+              { id: 'ocid1.database.oc1..db1', display_name: 'orders-db', lifecycle_state: 'AVAILABLE', resource_type: 'database', compartment_id: compartmentId, time_created: now }
+            ],
+            oke_clusters: [
+              { id: 'ocid1.cluster.oc1..c1', display_name: 'production-cluster', lifecycle_state: 'ACTIVE', resource_type: 'oke_cluster', compartment_id: compartmentId, time_created: now }
+            ],
+            api_gateways: [],
+            load_balancers: [
+              { id: 'ocid1.loadbalancer.oc1..lb1', display_name: 'public-lb', lifecycle_state: 'ACTIVE', resource_type: 'load_balancer', compartment_id: compartmentId, time_created: now }
+            ],
+            network_resources: [
+              { id: 'ocid1.vcn.oc1..v1', display_name: 'main-vcn', lifecycle_state: 'AVAILABLE', resource_type: 'vcn', compartment_id: compartmentId, time_created: now }
+            ],
+            storage_resources: [],
+            block_volumes: [
+              { id: 'ocid1.volume.oc1..vol1', display_name: 'db-volume', lifecycle_state: 'AVAILABLE', resource_type: 'block_volume', compartment_id: compartmentId, time_created: now }
+            ],
+            file_systems: [
+              { id: 'ocid1.filesystem.oc1..fs1', display_name: 'shared-fs', lifecycle_state: 'ACTIVE', resource_type: 'file_system', compartment_id: compartmentId, time_created: now }
+            ]
+          },
+          total_resources: 8,
+          last_updated: now
+        };
+        return dummy;
+      }
+      throw error;
+    }
   },
 
   // Get compute instances

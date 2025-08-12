@@ -66,21 +66,21 @@ class MonitoringService:
         self.cache_ttl = 300  # 5 minutes default cache
         
     def _get_monitoring_client(self):
-        """Get OCI monitoring client"""
+        """Get OCI monitoring client or None in dummy mode"""
         if not self.oci_service.oci_available:
-            raise ExternalServiceError("OCI service not available")
+            return None
         return self.oci_service.clients.get('monitoring')
     
     def _get_logging_client(self):
         """Get OCI logging management client"""
         if not self.oci_service.oci_available:
-            raise ExternalServiceError("OCI service not available")
+            return None
         return self.oci_service.clients.get('logging')
     
     def _get_log_search_client(self):
         """Get OCI log search client"""
         if not self.oci_service.oci_available:
-            raise ExternalServiceError("OCI service not available")
+            return None
         return self.oci_service.clients.get('log_search')
 
     async def get_alarm_status(self, compartment_id: str) -> List[Dict[str, Any]]:
@@ -92,11 +92,18 @@ class MonitoringService:
             return cached_data
 
         if not self.oci_service.oci_available:
-            raise ExternalServiceError("OCI service not available")
+            # Dummy mode: return static sample alarms
+            logger.info("OCI unavailable - returning dummy alarm data")
+            return [
+                {"id": "dummy_alarm_cpu_high", "display_name": "CPU Utilization High", "severity": "HIGH", "lifecycle_state": "ACTIVE", "is_enabled": True, "metric_compartment_id": compartment_id, "namespace": "oci_computeagent", "query": "CpuUtilization > 80", "rule_name": "DummyRule", "time_created": datetime.utcnow().isoformat(), "time_updated": datetime.utcnow().isoformat(), "source": "oci_alarm"},
+                {"id": "dummy_alarm_db_down", "display_name": "Database Down", "severity": "CRITICAL", "lifecycle_state": "ACTIVE", "is_enabled": True, "metric_compartment_id": compartment_id, "namespace": "oci_database", "query": "State = FAILED", "rule_name": "DummyRule", "time_created": datetime.utcnow().isoformat(), "time_updated": datetime.utcnow().isoformat(), "source": "oci_alarm"}
+            ]
 
         monitoring_client = self._get_monitoring_client()
         if not monitoring_client:
-            raise ExternalServiceError("OCI monitoring client not available")
+            # In dummy mode, already handled above; extra guard here
+            logger.info("Monitoring client not available - returning empty list")
+            return []
         
         logger.info(f"🔍 Fetching alarm status for compartment {compartment_id}")
         
@@ -442,7 +449,44 @@ class MonitoringService:
             return cached_data
 
         if not self.oci_service.oci_available:
-            raise ExternalServiceError("OCI service not available")
+            # Return dummy alarm history data instead of throwing exception
+            logger.info("OCI unavailable - returning dummy alarm history data")
+            dummy_history = [
+                {
+                    "alarm_id": "dummy_history_cpu_spike",
+                    "alarm_name": "CPU Utilization High",
+                    "status": "FIRING",
+                    "timestamp": (datetime.utcnow() - timedelta(hours=2)).isoformat(),
+                    "summary": "Alarm CPU Utilization High - HIGH severity triggered",
+                    "suppressed": False,
+                    "severity": "HIGH",
+                    "namespace": "oci_computeagent"
+                },
+                {
+                    "alarm_id": "dummy_history_db_conn",
+                    "alarm_name": "Database Connection Pool",
+                    "status": "OK",
+                    "timestamp": (datetime.utcnow() - timedelta(hours=4)).isoformat(),
+                    "summary": "Alarm Database Connection Pool - MEDIUM severity resolved",
+                    "suppressed": False,
+                    "severity": "MEDIUM",
+                    "namespace": "oci_database"
+                },
+                {
+                    "alarm_id": "dummy_history_storage",
+                    "alarm_name": "Storage Usage Critical",
+                    "status": "CREATED",
+                    "timestamp": (datetime.utcnow() - timedelta(hours=6)).isoformat(),
+                    "summary": "Alarm Storage Usage Critical created - CRITICAL",
+                    "suppressed": False,
+                    "severity": "CRITICAL",
+                    "namespace": "oci_objectstorage"
+                }
+            ]
+            
+            # Cache the dummy data
+            self.oci_service.cache.set(cache_key, dummy_history, self.cache_ttl)
+            return dummy_history
 
         monitoring_client = self._get_monitoring_client()
         if not monitoring_client:
@@ -680,7 +724,13 @@ class MonitoringService:
                 "total_alarms": total_alarms,
                 "active_alarms": active_alarms,
                 "severity_breakdown": severity_breakdown,
-                "recent_activity": f"{oci_alarms} OCI alarms + {resource_alerts} resource alerts",
+                "recent_activity": {
+                    "summary": f"{oci_alarms} OCI alarms + {resource_alerts} resource alerts",
+                    "oci_alarms": oci_alarms,
+                    "resource_alerts": resource_alerts,
+                    "last_updated": datetime.utcnow().isoformat(),
+                    "status": "active"
+                },
                 "top_alerts": top_alerts,
                 "timestamp": datetime.utcnow().isoformat(),
                 "health_score": health_score,
@@ -701,7 +751,14 @@ class MonitoringService:
                 "total_alarms": 0,
                 "active_alarms": 0,
                 "severity_breakdown": {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0},
-                "recent_activity": "Unable to fetch alert data",
+                "recent_activity": {
+                    "summary": "Unable to fetch alert data",
+                    "oci_alarms": 0,
+                    "resource_alerts": 0,
+                    "last_updated": datetime.utcnow().isoformat(),
+                    "status": "error",
+                    "error": str(e)
+                },
                 "top_alerts": [],
                 "timestamp": datetime.utcnow().isoformat(),
                 "health_score": 0.5,

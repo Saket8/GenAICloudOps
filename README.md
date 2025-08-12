@@ -526,3 +526,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Made with ❤️ by the GenAI CloudOps Team**
 
 *Empowering cloud operations with artificial intelligence* 
+
+## Live OCI/Kubernetes Integration
+
+By default, the backend runs in dummy mode (no live OCI or Kubernetes calls). To enable real connections and provide credentials, see `docs/LIVE_OCI_INTEGRATION.md`. 

@@ -21,12 +21,26 @@ import asyncio
 import psutil
 import redis
 
-from prometheus_client import (
-    Counter, Histogram, Gauge, Info, Summary,
-    CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST,
-    multiprocess, REGISTRY
-)
-from prometheus_client.openmetrics.exposition import openmetrics_content_type
+# Safe import guard for optional dependency
+try:
+    from prometheus_client import (
+        Counter, Histogram, Gauge, Info, Summary,
+        CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST,
+        multiprocess, REGISTRY
+    )
+    from prometheus_client.openmetrics.exposition import openmetrics_content_type
+    PROMETHEUS_AVAILABLE = True
+except Exception as e:
+    PROMETHEUS_AVAILABLE = False
+    # Define minimal stand-ins to avoid NameErrors when disabled
+    Counter = Histogram = Gauge = Info = Summary = object  # type: ignore
+    CollectorRegistry = object  # type: ignore
+    REGISTRY = None  # type: ignore
+    def generate_latest(*args, **kwargs):
+        return ""  # type: ignore
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4"
+    def openmetrics_content_type(*args, **kwargs):
+        return CONTENT_TYPE_LATEST
 
 from app.core.config import settings
 
@@ -56,8 +70,11 @@ class PrometheusMetricsService:
     """Comprehensive Prometheus metrics collection service"""
     
     def __init__(self, registry: Optional[CollectorRegistry] = None):
-        self.registry = registry or REGISTRY
-        self.enabled = getattr(settings, 'PROMETHEUS_ENABLED', True)
+        # Disable if package missing or config disabled
+        self.enabled = getattr(settings, 'PROMETHEUS_ENABLED', True) and PROMETHEUS_AVAILABLE
+        if not PROMETHEUS_AVAILABLE:
+            logger.info("prometheus_client not installed; Prometheus metrics disabled")
+        self.registry = registry or (REGISTRY if PROMETHEUS_AVAILABLE else None)
         self.metrics = {}
         self.custom_metrics = {}
         
@@ -69,7 +86,7 @@ class PrometheusMetricsService:
             self._initialize_business_metrics()
             logger.info("Prometheus metrics service initialized")
         else:
-            logger.info("Prometheus metrics disabled in configuration")
+            logger.info("Prometheus metrics disabled")
     
     def _initialize_core_metrics(self):
         """Initialize core application metrics"""

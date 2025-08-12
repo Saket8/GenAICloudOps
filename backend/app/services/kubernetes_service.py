@@ -87,10 +87,12 @@ class KubernetesService:
     """
     
     def __init__(self):
+        from app.core.config import settings
         self.clients = {}  # Multiple cluster support
         self.redis_client = None
         self.current_cluster = None
         self.kubeconfig_path = None
+        self._use_dummy = getattr(settings, 'USE_DUMMY_KUBERNETES', True)  # Default to True for demo
         self._setup_redis()
         
     def _setup_redis(self):
@@ -123,6 +125,20 @@ class KubernetesService:
             bool: True if successful, False otherwise
         """
         try:
+            # If dummy mode, short-circuit and do not touch kubeconfig
+            if getattr(self, '_use_dummy', False):
+                self.clients[cluster_name] = {
+                    'core_v1': None,
+                    'apps_v1': None,
+                    'rbac_v1': None,
+                    'version': None,
+                    'metrics': None,
+                    'custom_objects': None
+                }
+                self.current_cluster = cluster_name
+                logger.info("USE_DUMMY_KUBERNETES is True - configured dummy cluster without kubeconfig")
+                return True
+
             # Create temporary kubeconfig file
             with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
                 f.write(kubeconfig_content)
@@ -173,6 +189,18 @@ class KubernetesService:
             raise ClusterConnectionError("No cluster configured")
         
         try:
+            # If dummy mode, return mocked cluster info
+            if getattr(self, '_use_dummy', False):
+                return ClusterInfo(
+                    name=cluster_name,
+                    server="Dummy",
+                    version="1.27",
+                    namespace_count=4,
+                    pod_count=42,
+                    node_count=3,
+                    healthy=True
+                )
+
             core_v1 = self.clients[cluster_name]['core_v1']
             version_api = self.clients[cluster_name]['version']
             
@@ -228,18 +256,27 @@ class KubernetesService:
                 logger.debug(f"Cache error: {e}")
         
         try:
-            core_v1 = self.clients[cluster_name]['core_v1']
-            namespaces = core_v1.list_namespace()
-            
-            result = []
-            for ns in namespaces.items:
-                result.append({
-                    'name': ns.metadata.name,
-                    'status': ns.status.phase,
-                    'created_time': ns.metadata.creation_timestamp.isoformat(),
-                    'labels': ns.metadata.labels or {},
-                    'annotations': ns.metadata.annotations or {}
-                })
+            # Dummy mode returns mock namespaces
+            if getattr(self, '_use_dummy', False):
+                result = [
+                    {'name': 'default', 'status': 'Active', 'created_time': datetime.utcnow().isoformat(), 'labels': {}, 'annotations': {}},
+                    {'name': 'kube-system', 'status': 'Active', 'created_time': datetime.utcnow().isoformat(), 'labels': {}, 'annotations': {}},
+                    {'name': 'production', 'status': 'Active', 'created_time': datetime.utcnow().isoformat(), 'labels': {'environment': 'production'}, 'annotations': {}},
+                    {'name': 'staging', 'status': 'Active', 'created_time': datetime.utcnow().isoformat(), 'labels': {'environment': 'staging'}, 'annotations': {}}
+                ]
+            else:
+                core_v1 = self.clients[cluster_name]['core_v1']
+                namespaces = core_v1.list_namespace()
+                
+                result = []
+                for ns in namespaces.items:
+                    result.append({
+                        'name': ns.metadata.name,
+                        'status': ns.status.phase,
+                        'created_time': ns.metadata.creation_timestamp.isoformat(),
+                        'labels': ns.metadata.labels or {},
+                        'annotations': ns.metadata.annotations or {}
+                    })
             
             # Cache for 5 minutes
             if self.redis_client:
@@ -256,6 +293,31 @@ class KubernetesService:
 
     async def get_pods(self, namespace: str = None, cluster_name: str = None) -> List[PodInfo]:
         """Get pods in specified namespace or all namespaces"""
+        
+        # Return dummy data immediately if using dummy mode or no cluster configured
+        if getattr(self, '_use_dummy', True) or not self.current_cluster:
+            now = datetime.utcnow()
+            return [
+                PodInfo(
+                    name='web-server-xyz', namespace=namespace or 'production', status='Running',
+                    restart_count=0, node_name='worker-node-1', created_time=now,
+                    containers=[{'name': 'web', 'ready': True, 'restart_count': 0, 'image': 'nginx:1.21', 'state': 'Running'}],
+                    labels={'app': 'web'}, owner_references=[]
+                ),
+                PodInfo(
+                    name='db-pod-abc', namespace=namespace or 'production', status='CrashLoopBackOff',
+                    restart_count=12, node_name='worker-node-2', created_time=now,
+                    containers=[{'name': 'db', 'ready': False, 'restart_count': 12, 'image': 'postgres:13', 'state': 'Waiting: CrashLoopBackOff'}],
+                    labels={'app': 'db'}, owner_references=[]
+                ),
+                PodInfo(
+                    name='api-service-def', namespace=namespace or 'production', status='Running',
+                    restart_count=1, node_name='worker-node-1', created_time=now,
+                    containers=[{'name': 'api', 'ready': True, 'restart_count': 1, 'image': 'app:latest', 'state': 'Running'}],
+                    labels={'app': 'api'}, owner_references=[]
+                )
+            ]
+        
         cluster_name = cluster_name or self.current_cluster
         if not cluster_name or cluster_name not in self.clients:
             raise ClusterConnectionError("No cluster configured")
@@ -328,6 +390,9 @@ class KubernetesService:
             raise ClusterConnectionError("No cluster configured")
         
         try:
+            if getattr(self, '_use_dummy', False):
+                return f"{datetime.utcnow().isoformat()} [INFO] Dummy logs for pod {pod_name} in {namespace}...\n{datetime.utcnow().isoformat()} [ERROR] Simulated error line"
+
             core_v1 = self.clients[cluster_name]['core_v1']
             
             logs = core_v1.read_namespaced_pod_log(
@@ -354,6 +419,14 @@ class KubernetesService:
             raise ClusterConnectionError("No cluster configured")
         
         try:
+            if getattr(self, '_use_dummy', False):
+                result = [
+                    RBACRole(name='cluster-admin', namespace=None, kind='ClusterRole', rules=[{"verbs": ["*"], "resources": ["*"]}], created_time=datetime.utcnow(), labels={}),
+                    RBACRole(name='edit', namespace=None, kind='ClusterRole', rules=[{"verbs": ["get","list","create","update","patch","delete"], "resources": ["pods","services"]}], created_time=datetime.utcnow(), labels={}),
+                    RBACRole(name='view', namespace=None, kind='ClusterRole', rules=[{"verbs": ["get","list","watch"], "resources": ["pods","services"]}], created_time=datetime.utcnow(), labels={})
+                ]
+                return result
+
             rbac_v1 = self.clients[cluster_name]['rbac_v1']
             result = []
             
@@ -400,6 +473,13 @@ class KubernetesService:
             raise ClusterConnectionError("No cluster configured")
         
         try:
+            if getattr(self, '_use_dummy', False):
+                result = [
+                    RBACBinding(name='cluster-admin-binding', namespace=None, kind='ClusterRoleBinding', role_ref={'name': 'cluster-admin', 'kind': 'ClusterRole'}, subjects=[{"kind": "User", "name": "admin"}], created_time=datetime.utcnow()),
+                    RBACBinding(name='developer-binding', namespace='default', kind='RoleBinding', role_ref={'name': 'edit', 'kind': 'ClusterRole'}, subjects=[{"kind": "User", "name": "developer"}], created_time=datetime.utcnow())
+                ]
+                return result
+
             rbac_v1 = self.clients[cluster_name]['rbac_v1']
             result = []
             

@@ -13,32 +13,15 @@ import { RemediationPage } from './components/pages/RemediationPage';
 import { AccessAnalyzerPage } from './components/pages/AccessAnalyzerPage';
 import { PodHealthAnalyzerPage } from './components/pages/PodHealthAnalyzerPage';
 import { CostAnalyzerPage } from './components/pages/CostAnalyzerPage';
-
-// Placeholder components for other pages
-function CloudResourcesPage() {
-  return (
-    <div className="text-center py-12">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Cloud Resources</h1>
-      <p className="text-gray-600 dark:text-gray-400">Cloud resources management coming soon...</p>
-    </div>
-  );
-}
+import { SettingsPage } from './components/pages/SettingsPage';
+import { CloudResourcesPage } from './components/pages/CloudResourcesPage';
 
 // KubernetesPage is now replaced by PodHealthAnalyzerPage
-
-
 
 // Use RemediationPage as AutomationPage
 const AutomationPage = RemediationPage;
 
-function SettingsPage() {
-  return (
-    <div className="text-center py-12">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Settings</h1>
-      <p className="text-gray-600 dark:text-gray-400">Settings panel coming soon...</p>
-    </div>
-  );
-}
+// SettingsPage now provided with dummy data UI
 
 function NotFound() {
   return (
