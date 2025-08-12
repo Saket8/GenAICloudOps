@@ -3,8 +3,9 @@ from typing import Dict, Any, List
 import logging
 from app.services.performance_service import performance_service
 from app.services.cache_service import cache_service
-from app.api.endpoints.auth import get_current_user, require_role
-from app.schemas.auth import User
+from app.api.endpoints.auth import get_current_user
+from app.core.permissions import RequireAdminRole, RequireOperatorRole
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -12,12 +13,13 @@ router = APIRouter()
 
 @router.get("/system/metrics", tags=["performance"])
 async def get_system_metrics(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RequireAdminRole)
 ) -> Dict[str, Any]:
     """Get current system performance metrics"""
     try:
         # Require admin role for system metrics
-        require_role(current_user, ["Admin"])
+        _ = current_user  # already validated by dependency
+
         
         metrics = performance_service.system_monitor.get_system_metrics()
         process_metrics = await performance_service.system_monitor.get_process_metrics()
@@ -40,7 +42,7 @@ async def get_system_metrics(
 
 @router.get("/summary", tags=["performance"])
 async def get_performance_summary(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RequireOperatorRole)
 ) -> Dict[str, Any]:
     """Get comprehensive performance summary"""
     try:
@@ -63,7 +65,7 @@ async def get_performance_summary(
 
 @router.get("/cache/stats", tags=["performance"])
 async def get_cache_stats(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RequireOperatorRole)
 ) -> Dict[str, Any]:
     """Get cache performance statistics"""
     try:
@@ -90,7 +92,7 @@ async def get_cache_stats(
 
 @router.get("/database/optimization", tags=["performance"])
 async def get_database_optimization(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RequireAdminRole)
 ) -> Dict[str, Any]:
     """Get database optimization suggestions"""
     try:
@@ -201,7 +203,7 @@ async def get_optimization_report(
 @router.post("/cache/clear", tags=["performance"])
 async def clear_cache(
     namespace: str = None,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RequireAdminRole)
 ) -> Dict[str, Any]:
     """Clear cache data"""
     try:
@@ -232,7 +234,7 @@ async def clear_cache(
 
 @router.get("/alerts", tags=["performance"])
 async def get_performance_alerts(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(RequireOperatorRole)
 ) -> Dict[str, Any]:
     """Get current performance alerts"""
     try:

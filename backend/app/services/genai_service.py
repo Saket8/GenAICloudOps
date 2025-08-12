@@ -1533,4 +1533,7 @@ class GenAIService:
         }
 
 # Global service instance
-genai_service = GenAIService() 
+genai_service = GenAIService()
+
+def get_genai_service() -> GenAIService:
+    return genai_service 

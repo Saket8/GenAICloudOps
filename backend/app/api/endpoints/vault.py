@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from ...core.database import get_db
-from ...core.permissions import require_permission, Permission
+from ...core.permissions import require_permissions, RequireAdminRole
 from ...models.user import User
 from ...services.auth_service import AuthService
 from ...services.oci_vault_service import (
@@ -73,7 +73,7 @@ class VaultStatsResponse(BaseModel):
 
 @router.get("/stats", response_model=VaultStatsResponse)
 async def get_vault_statistics(
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Get vault statistics and health information"""
     try:
@@ -106,7 +106,7 @@ async def get_vault_statistics(
 @router.get("/secrets", response_model=SecretListResponse)
 async def list_secrets(
     secret_type: Optional[str] = None,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """List all secrets in the vault (metadata only)"""
     try:
@@ -150,7 +150,7 @@ async def list_secrets(
 @router.post("/secrets", status_code=status.HTTP_201_CREATED)
 async def create_secret(
     request: SecretCreateRequest,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Create a new secret in the vault"""
     try:
@@ -182,7 +182,7 @@ async def rotate_secret(
     secret_name: str,
     request: SecretUpdateRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Rotate a secret by creating a new version"""
     try:
@@ -210,7 +210,7 @@ async def rotate_secret(
 async def delete_secret(
     secret_name: str,
     permanent: bool = False,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Delete a secret from the vault"""
     try:
@@ -235,7 +235,7 @@ async def delete_secret(
 @router.post("/api-keys", status_code=status.HTTP_201_CREATED)
 async def store_api_key(
     request: APIKeyRequest,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Store an API key for a service"""
     try:
@@ -265,7 +265,7 @@ async def rotate_api_key(
     service_name: str,
     new_api_key: str,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Rotate an API key for a service"""
     try:
@@ -293,7 +293,7 @@ async def rotate_api_key(
 async def rotate_jwt_secret(
     background_tasks: BackgroundTasks,
     new_secret: Optional[str] = None,
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Rotate the JWT signing secret"""
     try:
@@ -322,7 +322,7 @@ async def rotate_jwt_secret(
 
 @router.post("/cache/clear")
 async def clear_vault_cache(
-    current_user: User = Depends(require_permission(Permission.ADMIN))
+    current_user: User = Depends(RequireAdminRole)
 ):
     """Clear the vault cache to force refresh from OCI Vault"""
     try:

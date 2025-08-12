@@ -229,7 +229,7 @@ export function ActionsList({
                             {action.title}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {action.service_name} • {action.action_type.replace('_', ' ').toUpperCase()}
+                            {action.service_name} • {(action.action_type ?? '').toString().replace('_', ' ').toUpperCase()}
                           </div>
                         </div>
                       </div>
@@ -238,14 +238,14 @@ export function ActionsList({
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         remediationService.getStatusColor(action.status)
                       }`}>
-                        {action.status.replace('_', ' ')}
+                        {(action.status ?? '').toString().replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         remediationService.getSeverityColor(action.severity)
                       }`}>
-                        {action.severity.toUpperCase()}
+                        {(action.severity ?? 'low').toString().toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">

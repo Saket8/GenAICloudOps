@@ -257,7 +257,7 @@ async def get_pods(
     """Get pods in specified namespace or all namespaces"""
     try:
         kubernetes_service = get_kubernetes_service()
-        pods = kubernetes_service.get_pods(namespace, cluster_name)
+        pods = await kubernetes_service.get_pods(namespace, cluster_name)
         
         # Convert PodInfo objects to dictionaries for response
         result = []

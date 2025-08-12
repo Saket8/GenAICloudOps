@@ -24,8 +24,34 @@ from enum import Enum
 from datetime import datetime, timedelta
 import asyncio
 import httpx
-import jinja2
 from pathlib import Path
+
+# Optional dependency: jinja2
+try:
+    import jinja2
+    JINJA_AVAILABLE = True
+except Exception:
+    JINJA_AVAILABLE = False
+    class _DummyTemplate:
+        def __init__(self, tpl: str):
+            self.tpl = tpl
+        def render(self, **kwargs):
+            # Very naive replacement for {{ var }} tokens
+            result = self.tpl
+            for k, v in kwargs.items():
+                result = result.replace(f"{{{{ {k} }}}}", str(v))
+            return result
+    class _DummyLoader:
+        def __init__(self):
+            self.mapping = {}
+        def get(self, name, default=None):
+            return self.mapping.get(name, default)
+    class _DummyEnv:
+        def __init__(self):
+            self.loader = _DummyLoader()
+        def get_template(self, name: str):
+            tpl = self.loader.get(name, "")
+            return _DummyTemplate(tpl)
 
 from app.core.config import settings
 from app.services.prometheus_service import get_prometheus_service
@@ -135,10 +161,14 @@ class NotificationService:
         self.http_client = httpx.AsyncClient(timeout=30.0)
         
         # Template engine
-        self.jinja_env = jinja2.Environment(
-            loader=jinja2.DictLoader({}),
-            autoescape=jinja2.select_autoescape(['html', 'xml'])
-        )
+        if JINJA_AVAILABLE:
+            self.jinja_env = jinja2.Environment(
+                loader=jinja2.DictLoader({}),
+                autoescape=jinja2.select_autoescape(['html', 'xml'])
+            )
+        else:
+            logger.info("jinja2 not installed; using simple template fallback")
+            self.jinja_env = _DummyEnv()
         
         if self.enabled:
             self._initialize_default_templates()

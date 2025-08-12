@@ -78,8 +78,8 @@ export function DashboardPage() {
   
   // ⚠️ TEMPORARILY DISABLED: WebSocket for real-time updates (causing performance issues)
   const { connected, error: wsError } = useWebSocket({
-    autoConnect: false, // ❌ DISABLED to prevent connection loops
-    subscriptions: [SubscriptionType.DASHBOARD_METRICS, SubscriptionType.SYSTEM_HEALTH]
+    autoConnect: false,
+    subscriptions: []
   });
   const { metrics, lastUpdated } = useSystemMetrics();
   const connectionStatus = useConnectionStatus();

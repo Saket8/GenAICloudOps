@@ -163,30 +163,30 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_override_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
-@app.on_event("startup")  # TODO: Migrate to lifespan in FastAPI 0.116+
-async def startup_event() -> None:
-    """Initialize database and default data on startup"""
-    try:
-        # Create all database tables
-        create_tables()
-        print("Database tables created successfully")
-        
-        # Initialize default roles
-        init_default_roles()
-        print("Default roles initialized successfully")
-        
-        # Initialize gateway (health checks disabled for now to prevent startup loops)
-        # from app.core.gateway import setup_gateway_health_checks
-        # asyncio.create_task(setup_gateway_health_checks())
-        print("API Gateway initialized (health checks disabled)")
-        
-        print("✅ GenAI CloudOps API started successfully")
-        print("📊 Features enabled: Authentication, RBAC, Security Middleware, "
-              "Rate Limiting, Input Validation, Compression, Performance Monitoring, "
-              "API Gateway")
-        
-    except Exception as e:
-        print(f"❌ Error during startup: {e}")
+# @app.on_event("startup")  # TODO: Migrate to lifespan in FastAPI 0.116+
+# async def startup_event() -> None:
+#     """Initialize database and default data on startup"""
+#     try:
+#         # Create all database tables
+#         create_tables()
+#         print("Database tables created successfully")
+#         
+#         # Initialize default roles
+#         init_default_roles()
+#         print("Default roles initialized successfully")
+#         
+#         # Initialize gateway (health checks disabled for now to prevent startup loops)
+#         # from app.core.gateway import setup_gateway_health_checks
+#         # asyncio.create_task(setup_gateway_health_checks())
+#         print("API Gateway initialized (health checks disabled)")
+#         
+#         print("✅ GenAI CloudOps API started successfully")
+#         print("📊 Features enabled: Authentication, RBAC, Security Middleware, "
+#               "Rate Limiting, Input Validation, Compression, Performance Monitoring, "
+#               "API Gateway")
+#         
+#     except Exception as e:
+#         print(f"❌ Error during startup: {e}")
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")

@@ -102,7 +102,7 @@ export function SystemStatus({ healthStatus, onRefresh }: SystemStatusProps) {
             <h3 className={`text-lg font-medium ${
               overallHealthy ? 'text-green-900' : 'text-red-900'
             }`}>
-              System Status: {healthStatus.status.toUpperCase()}
+              System Status: {(healthStatus.status ?? '').toString().toUpperCase()}
             </h3>
             <p className={`text-sm ${
               overallHealthy ? 'text-green-700' : 'text-red-700'
@@ -134,7 +134,7 @@ export function SystemStatus({ healthStatus, onRefresh }: SystemStatusProps) {
                   <div className="flex items-center">
                     <i className={`${getStatusIcon(check.status)} text-xs mr-1`}></i>
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {check.status.replace('_', ' ')}
+                      {(check.status ?? '').toString().replace('_', ' ')}
                     </span>
                   </div>
                 </div>

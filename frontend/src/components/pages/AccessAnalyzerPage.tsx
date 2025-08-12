@@ -426,7 +426,7 @@ const SummaryTab = () => {
             summaryData.risk_overview.overall_risk_level === 'high' ? 'bg-orange-900 text-orange-300' :
             summaryData.risk_overview.overall_risk_level === 'medium' ? 'bg-yellow-900 text-yellow-300' : 'bg-green-900 text-green-300'
           }`}>
-            {summaryData.risk_overview.overall_risk_level.toUpperCase()} RISK
+            {(summaryData.risk_overview?.overall_risk_level ?? '').toString().toUpperCase()} RISK
           </span>
         </div>
       </div>

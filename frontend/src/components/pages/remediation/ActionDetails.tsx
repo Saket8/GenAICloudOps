@@ -115,13 +115,13 @@ export function ActionDetails({ action, onClose, onActionUpdate }: ActionDetails
                   <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                     remediationService.getStatusColor(action.status)
                   }`}>
-                    {action.status.replace('_', ' ').toUpperCase()}
+                    {(action.status ?? '').toString().replace('_', ' ').toUpperCase() || 'UNKNOWN'}
                   </span>
                   
                   <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                     remediationService.getSeverityColor(action.severity)
                   }`}>
-                    {action.severity.toUpperCase()}
+                    {(action.severity ?? 'low').toString().toUpperCase()}
                   </span>
                 </div>
 
@@ -200,7 +200,7 @@ export function ActionDetails({ action, onClose, onActionUpdate }: ActionDetails
                         action.action_type === 'script' ? 'fa-terminal' :
                         'fa-cogs'
                       } mr-1`}></i>
-                      {action.action_type.replace('_', ' ').toUpperCase()}
+                      {(action.action_type ?? '').toString().replace('_', ' ').toUpperCase() || 'N/A'}
                     </dd>
                   </div>
                 </dl>
@@ -285,7 +285,7 @@ export function ActionDetails({ action, onClose, onActionUpdate }: ActionDetails
                     <div key={log.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded text-sm">
                       <div>
                         <span className="font-medium text-gray-900 dark:text-white">
-                          {log.event_type.replace('_', ' ')}
+                          {(log.event_type ?? '').toString().replace('_', ' ')}
                         </span>
                         <span className="text-gray-600 dark:text-gray-400 ml-2">
                           {log.event_description}

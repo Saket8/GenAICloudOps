@@ -73,7 +73,7 @@ export function AlertsPage() {
 
   // Real-time WebSocket integration
   const { connected } = useWebSocket({
-    autoConnect: true,
+    autoConnect: false,
     subscriptions: [SubscriptionType.ALERTS]
   });
   const { alerts: realtimeAlerts, unreadCount, markAsRead, markAllAsRead } = useAlerts();
