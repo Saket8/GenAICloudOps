@@ -1,0 +1,43 @@
+2025-11-23 23:42:49,238 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-11-23 23:42:49,244 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.username AS users_username, users.email AS users_email, users.hashed_password AS users_hashed_password, users.full_name AS users_full_name, users.is_active AS users_is_active, users.is_verified AS users_is_verified, users.created_at AS users_created_at, users.updated_at AS users_updated_at, users.last_login AS users_last_login 
+FROM users
+2025-11-23 23:42:49,244 INFO sqlalchemy.engine.Engine [generated in 0.00027s] ()
+================================================================================
+USER DETAILS AND PERMISSIONS
+================================================================================
+
+User: admin (ID: 1, Email: admin@genai-cloudops.com)
+  Active: True
+2025-11-23 23:42:49,249 INFO sqlalchemy.engine.Engine SELECT user_roles.id AS user_roles_id, user_roles.user_id AS user_roles_user_id, user_roles.role_id AS user_roles_role_id, user_roles.assigned_by AS user_roles_assigned_by, user_roles.assigned_at AS user_roles_assigned_at, user_roles.expires_at AS user_roles_expires_at 
+FROM user_roles 
+WHERE user_roles.user_id = ?
+2025-11-23 23:42:49,249 INFO sqlalchemy.engine.Engine [generated in 0.00024s] (1,)
+  Role Assignments (1):
+2025-11-23 23:42:49,252 INFO sqlalchemy.engine.Engine SELECT roles.id AS roles_id, roles.name AS roles_name, roles.display_name AS roles_display_name, roles.description AS roles_description, roles.can_view_dashboard AS roles_can_view_dashboard, roles.can_view_alerts AS roles_can_view_alerts, roles.can_approve_remediation AS roles_can_approve_remediation, roles.can_execute_remediation AS roles_can_execute_remediation, roles.can_manage_users AS roles_can_manage_users, roles.can_manage_roles AS roles_can_manage_roles, roles.can_view_access_analyzer AS roles_can_view_access_analyzer, roles.can_view_pod_analyzer AS roles_can_view_pod_analyzer, roles.can_view_cost_analyzer AS roles_can_view_cost_analyzer, roles.can_use_chatbot AS roles_can_use_chatbot, roles.created_at AS roles_created_at, roles.updated_at AS roles_updated_at 
+FROM roles 
+WHERE roles.id = ?
+ LIMIT ? OFFSET ?
+2025-11-23 23:42:49,252 INFO sqlalchemy.engine.Engine [generated in 0.00022s] (1, 1, 0)
+    - Role ID 1: RoleEnum.ADMIN (Administrator)
+      can_view_dashboard: True
+      can_view_alerts: True
+      can_manage_users: True
+
+User: souravb (ID: 2, Email: sourav.bhadra@kpn.com)
+  Active: True
+2025-11-23 23:42:49,254 INFO sqlalchemy.engine.Engine SELECT user_roles.id AS user_roles_id, user_roles.user_id AS user_roles_user_id, user_roles.role_id AS user_roles_role_id, user_roles.assigned_by AS user_roles_assigned_by, user_roles.assigned_at AS user_roles_assigned_at, user_roles.expires_at AS user_roles_expires_at 
+FROM user_roles 
+WHERE user_roles.user_id = ?
+2025-11-23 23:42:49,254 INFO sqlalchemy.engine.Engine [cached since 0.006104s ago] (2,)
+  Role Assignments (1):
+2025-11-23 23:42:49,256 INFO sqlalchemy.engine.Engine SELECT roles.id AS roles_id, roles.name AS roles_name, roles.display_name AS roles_display_name, roles.description AS roles_description, roles.can_view_dashboard AS roles_can_view_dashboard, roles.can_view_alerts AS roles_can_view_alerts, roles.can_approve_remediation AS roles_can_approve_remediation, roles.can_execute_remediation AS roles_can_execute_remediation, roles.can_manage_users AS roles_can_manage_users, roles.can_manage_roles AS roles_can_manage_roles, roles.can_view_access_analyzer AS roles_can_view_access_analyzer, roles.can_view_pod_analyzer AS roles_can_view_pod_analyzer, roles.can_view_cost_analyzer AS roles_can_view_cost_analyzer, roles.can_use_chatbot AS roles_can_use_chatbot, roles.created_at AS roles_created_at, roles.updated_at AS roles_updated_at 
+FROM roles 
+WHERE roles.id = ?
+ LIMIT ? OFFSET ?
+2025-11-23 23:42:49,257 INFO sqlalchemy.engine.Engine [cached since 0.003455s ago] (4, 1, 0)
+    - Role ID 4: RoleEnum.CLOUD_ADMIN (Infrastructure Admin)
+      can_view_dashboard: True
+      can_view_alerts: True
+      can_manage_users: False
+
+2025-11-23 23:42:49,257 INFO sqlalchemy.engine.Engine ROLLBACK

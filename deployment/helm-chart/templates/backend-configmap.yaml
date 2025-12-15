@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-backend-config
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+data:
+  # API Configuration
+  API_V1_STR: {{ .Values.backend.config.apiV1Str | default "/api/v1" | quote }}
+  PROJECT_NAME: {{ .Values.backend.config.projectName | default "GenAI CloudOps API" | quote }}
+  
+  # Environment Configuration
+  ENVIRONMENT: {{ .Values.backend.config.environment | default "production" | quote }}
+  DEBUG: {{ .Values.backend.config.debug | default "false" | quote }}
+  
+  # CORS Configuration
+  BACKEND_CORS_ORIGINS: {{ .Values.backend.config.corsOrigins | default "http://localhost:3000,http://localhost:5173" | quote }}
+  
+  # Security Configuration
+  ALGORITHM: {{ .Values.backend.config.algorithm | default "HS256" | quote }}
+  ACCESS_TOKEN_EXPIRE_MINUTES: {{ .Values.backend.config.accessTokenExpireMinutes | default "30" | quote }}
+  
+  # Redis Configuration
+  REDIS_ENABLED: {{ .Values.redis.enabled | default "false" | quote }}
+  REDIS_HOST: {{ .Values.redis.host | default "redis" | quote }}
+  REDIS_PORT: {{ .Values.redis.port | default "6379" | quote }}
+  REDIS_DB: {{ .Values.redis.db | default "0" | quote }}
+  
+  # OCI Configuration
+  OCI_PROFILE: {{ .Values.oci.profile | default "DEFAULT" | quote }}
+  OCI_REGION: {{ .Values.oci.region | default "us-ashburn-1" | quote }}
+  OCI_TENANCY_ID: {{ .Values.oci.tenancyId | default "" | quote }}
+  OCI_USER_ID: {{ .Values.oci.userId | default "" | quote }}
+  OCI_FINGERPRINT: {{ .Values.oci.fingerprint | default "" | quote }}
+  
+  # OCI Vault Configuration
+  OCI_VAULT_ENABLED: {{ .Values.oci.vault.enabled | default "true" | quote }}
+  OCI_COMPARTMENT_ID: {{ .Values.oci.vault.compartmentId | default "" | quote }}
+  OCI_VAULT_ID: {{ .Values.oci.vault.vaultId | default "" | quote }}
+  OCI_KMS_KEY_ID: {{ .Values.oci.vault.kmsKeyId | default "" | quote }}
+  OCI_USE_INSTANCE_PRINCIPAL: {{ .Values.oci.vault.useInstancePrincipal | default "false" | quote }}
+  VAULT_CACHE_TTL_MINUTES: {{ .Values.oci.vault.cacheTtlMinutes | default "15" | quote }}
+  VAULT_ENABLE_CACHING: {{ .Values.oci.vault.enableCaching | default "true" | quote }}
+  VAULT_MAX_CACHE_SIZE: {{ .Values.oci.vault.maxCacheSize | default "1000" | quote }}
+  
+  # Monitoring Configuration
+  MONITORING_CACHE_TTL: {{ .Values.backend.config.monitoringCacheTtl | default "300" | quote }}
+  ALERT_HISTORY_HOURS: {{ .Values.backend.config.alertHistoryHours | default "24" | quote }}
+  MAX_LOG_SEARCH_RESULTS: {{ .Values.backend.config.maxLogSearchResults | default "1000" | quote }}
+  HEALTH_SCORE_THRESHOLD_HEALTHY: {{ .Values.backend.config.healthScoreThresholdHealthy | default "90.0" | quote }}
+  HEALTH_SCORE_THRESHOLD_WARNING: {{ .Values.backend.config.healthScoreThresholdWarning | default "70.0" | quote }}
+  HEALTH_SCORE_THRESHOLD_DEGRADED: {{ .Values.backend.config.healthScoreThresholdDegraded | default "50.0" | quote }}
+  
+  # GenAI Configuration
+  GROQ_MODEL: {{ .Values.genai.groqModel | default "llama3-8b-8192" | quote }}
+  GROQ_MAX_TOKENS: {{ .Values.genai.groqMaxTokens | default "1024" | quote }}
+  GROQ_TEMPERATURE: {{ .Values.genai.groqTemperature | default "0.7" | quote }}
+  GROQ_TIMEOUT: {{ .Values.genai.groqTimeout | default "30" | quote }}
+  GENAI_CACHE_TTL: {{ .Values.genai.cacheTtl | default "3600" | quote }}
+  GENAI_RATE_LIMIT_PER_MINUTE: {{ .Values.genai.rateLimitPerMinute | default "100" | quote }}
+  GENAI_MAX_CONTEXT_LENGTH: {{ .Values.genai.maxContextLength | default "4000" | quote }}
+  GENAI_ENABLE_CACHING: {{ .Values.genai.enableCaching | default "false" | quote }}
+  GENAI_ENABLE_BATCHING: {{ .Values.genai.enableBatching | default "true" | quote }}
+  GENAI_BATCH_SIZE: {{ .Values.genai.batchSize | default "5" | quote }}
+  GENAI_FALLBACK_MODEL: {{ .Values.genai.fallbackModel | default "mixtral-8x7b-32768" | quote }} 

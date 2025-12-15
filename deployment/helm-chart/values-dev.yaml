@@ -1,0 +1,77 @@
+# Development environment overrides
+replicaCount: 1
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: "dev"
+    pullPolicy: Always
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+backend:
+  replicaCount: 1
+  image:
+    tag: "dev"
+    pullPolicy: Always
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  config:
+    environment: "development"
+    debug: "true"
+    corsOrigins: "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+
+postgres:
+  persistence:
+    enabled: false  # Use ephemeral storage for dev
+    size: 5Gi
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: genai-cloudops-dev.local
+      paths:
+        frontend:
+          path: /
+          pathType: Prefix
+        backend:
+          path: /api
+          pathType: Prefix
+        websocket:
+          path: /ws
+          pathType: Prefix
+        health:
+          path: /health
+          pathType: Exact
+
+autoscaling:
+  enabled: false
+
+monitoring:
+  enabled: false
+
+rbac:
+  allowPodExecution: true
+  allowPodLogs: true
+
+# Development-specific GenAI settings
+genai:
+  enableCaching: "false"
+  rateLimitPerMinute: "1000"  # Higher limit for development 

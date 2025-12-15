@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GenAI CloudOps Task Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-+F7H4Y1z+fyqCkCmZomYuoQi4US/BSEfgpEhHuMv7M14JMC1veQ8GqVh+Lz8GwUuKdrUZdV9y79Q1gG7W8EqgQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f172a;
+        --panel: #111c33;
+        --card: #1e293b;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --border: #1e293b;
+        --success: #4ade80;
+        --warning: #fbbf24;
+        --danger: #f87171;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 55%),
+          radial-gradient(circle at 20% 80%, rgba(94, 234, 212, 0.08), transparent 45%), var(--bg);
+        color: #e2e8f0;
+      }
+
+      header {
+        padding: 48px 24px 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin: 0 0 12px;
+        letter-spacing: -0.025em;
+      }
+
+      p.description {
+        margin: 0;
+        color: var(--muted);
+        max-width: 720px;
+        line-height: 1.6;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        padding: 0 24px 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .stat-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
+      }
+
+      .stat-card span.label {
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.14em;
+      }
+
+      .stat-card .value {
+        font-size: 2rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .trend {
+        font-size: 0.85rem;
+        color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .content-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px 60px;
+        display: grid;
+        gap: 28px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.42);
+      }
+
+      .panel h2 {
+        margin: 0 0 20px;
+        font-size: 1.4rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      thead {
+        background: rgba(148, 163, 184, 0.08);
+      }
+
+      th,
+      td {
+        padding: 14px 18px;
+        font-size: 0.95rem;
+      }
+
+      th {
+        text-align: left;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.78rem;
+      }
+
+      tbody tr + tr {
+        border-top: 1px solid var(--border);
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        letter-spacing: 0.02em;
+      }
+
+      .status.in-progress {
+        background: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+      }
+
+      .status.completed {
+        background: rgba(34, 197, 94, 0.18);
+        color: var(--success);
+      }
+
+      .status.pending {
+        background: rgba(251, 191, 36, 0.18);
+        color: var(--warning);
+      }
+
+      .owners,
+      .notes {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .progress-bar {
+        height: 10px;
+        background: rgba(148, 163, 184, 0.25);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+
+      .progress-bar span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #38bdf8, #6366f1);
+      }
+
+      .risk-log {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 14px;
+      }
+
+      .risk-item {
+        background: var(--card);
+        border-radius: 14px;
+        padding: 18px;
+        border-left: 4px solid rgba(248, 113, 113, 0.65);
+        border-right: 1px solid var(--border);
+      }
+
+      .risk-item h3 {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+      }
+
+      .risk-item p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      footer {
+        text-align: center;
+        color: var(--muted);
+        padding: 40px 24px 60px;
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 720px) {
+        header {
+          padding-top: 32px;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .panel,
+        .stat-card {
+          padding: 20px;
+        }
+
+        th,
+        td {
+          padding: 12px 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>GenAI CloudOps Delivery Plan</h1>
+      <p class="description">
+        Snapshot of ongoing initiatives spanning OCI and AWS enablement for the GenAI CloudOps dashboard. This internal
+        view helps engineering and product leads track milestones, owners, and risks while the team completes the
+        multi-cloud rollout.
+      </p>
+    </header>
+
+    <section class="dashboard-grid">
+      <article class="stat-card">
+        <span class="label">Overall Progress</span>
+        <div class="value">
+          68%
+          <span class="trend"><i class="fas fa-angle-double-up"></i> +12% this week</span>
+        </div>
+        <div class="progress-bar"><span style="width: 68%"></span></div>
+      </article>
+
+      <article class="stat-card">
+        <span class="label">Active Streams</span>
+        <div class="value">5</div>
+        <p class="owners">OCI hardening, AWS prototype, Landing UX, Docs, QA</p>
+      </article>
+
+      <article class="stat-card">
+        <span class="label">Key Risks</span>
+        <div class="value">2</div>
+        <p class="owners">IAM parity &bull; Demo stability</p>
+      </article>
+
+      <article class="stat-card">
+        <span class="label">Upcoming Milestone</span>
+        <div class="value">Nov 18</div>
+        <p class="owners">Multi-cloud pilot demo</p>
+      </article>
+    </section>
+
+    <main class="content-wrapper">
+      <section class="panel">
+        <h2><i class="fas fa-list-check"></i> Delivery Tracker</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Task ID</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Owner</th>
+              <th>ETA</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>OCI-101</td>
+              <td>Finalize OCI remediation workflows and regression pass</td>
+              <td><span class="status completed"><i class="fas fa-check"></i> Completed</span></td>
+              <td>S. Rao</td>
+              <td>Oct 28</td>
+              <td class="notes">Ready for demo, awaiting sign-off</td>
+            </tr>
+            <tr>
+              <td>AWS-201</td>
+              <td>Implement AWS dashboard parity using demo datasets</td>
+              <td><span class="status in-progress"><i class="fas fa-spinner"></i> In Progress</span></td>
+              <td>M. Patel</td>
+              <td>Nov 06</td>
+              <td class="notes">Dashboard + monitoring complete, cost/security pending polish</td>
+            </tr>
+            <tr>
+              <td>UX-305</td>
+              <td>Launch post-login cloud selection and provider toggle</td>
+              <td><span class="status in-progress"><i class="fas fa-spinner"></i> In Progress</span></td>
+              <td>J. Liu</td>
+              <td>Nov 05</td>
+              <td class="notes">Awaiting accessibility review</td>
+            </tr>
+            <tr>
+              <td>DOC-410</td>
+              <td>Update docs with AWS preview and task tracker</td>
+              <td><span class="status pending"><i class="fas fa-hourglass-half"></i> Pending</span></td>
+              <td>A. Singh</td>
+              <td>Nov 08</td>
+              <td class="notes">Task dashboard drafted; README link TBD</td>
+            </tr>
+            <tr>
+              <td>QA-520</td>
+              <td>Regression suite for multi-cloud routing & demo data</td>
+              <td><span class="status pending"><i class="fas fa-hourglass-half"></i> Pending</span></td>
+              <td>L. Gomez</td>
+              <td>Nov 12</td>
+              <td class="notes">Scoping Cypress smoke tests for AWS flows</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2><i class="fas fa-bullseye"></i> Milestones</h2>
+        <div class="risk-log">
+          <article class="risk-item" style="border-left-color: rgba(56, 189, 248, 0.75)">
+            <h3>Phase 1 &mdash; Multi-cloud readiness (Nov 05)</h3>
+            <p>
+              Cloud selector UX, AWS overview dashboards, and updated documentation outline are ready for stakeholder
+              validation.
+            </p>
+            <div class="owners">Blocked by accessibility review and QA buy-in.</div>
+          </article>
+
+          <article class="risk-item" style="border-left-color: rgba(34, 197, 94, 0.75)">
+            <h3>Phase 2 &mdash; Pilot demo (Nov 18)</h3>
+            <p>
+              Prepare live walkthrough showcasing AWS + OCI parity, GenAI insights, and the new task dashboard for
+              leadership.
+            </p>
+            <div class="owners">Requires demo data refresh and guardrail scripts.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2><i class="fas fa-triangle-exclamation"></i> Risks & Mitigations</h2>
+        <ul class="risk-log">
+          <li class="risk-item">
+            <h3>IAM parity between OCI and AWS roles</h3>
+            <p>
+              AWS IAM roles in the demo environment lack one-to-one mapping with OCI permissions which could confuse users
+              during the pilot.
+            </p>
+            <div class="owners">
+              <strong>Mitigation:</strong> Provide a tooltip matrix and fallback role descriptions in the UI by Nov 10.
+            </div>
+          </li>
+          <li class="risk-item">
+            <h3>Demo data drift</h3>
+            <p>
+              Divergence between backend datasets and frontend expectations may break parity if not refreshed weekly.
+            </p>
+            <div class="owners">
+              <strong>Mitigation:</strong> Add a CI job stub that validates demo JSON shape against TypeScript types.
+            </div>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      Maintained by the GenAI CloudOps crew &mdash; last updated Nov 3, 2025. For updates contact cloudops@genai.team.
+    </footer>
+  </body>
+</html>

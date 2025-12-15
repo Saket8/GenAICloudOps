@@ -1,0 +1,331 @@
+# Default values for genai-cloudops
+replicaCount: 1
+
+# Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+# Image pull secrets for private repositories
+imagePullSecrets: []
+# - name: regcred
+
+# Service Account settings
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  automountServiceAccountToken: true
+
+# Frontend configuration
+frontend:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/your-org/genai-cloudops-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Backend configuration
+backend:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/your-org/genai-cloudops-backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  # Application secrets
+  secretKey: "change-this-in-production-very-secret-key"
+  # Security context
+  podSecurityContext:
+    fsGroup: 1000
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+      - ALL
+  # Persistence for application data
+  persistence:
+    enabled: false
+    size: 5Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  # Environment variables
+  env:
+    - name: ENVIRONMENT
+      value: "production"
+    - name: DEBUG
+      value: "false"
+  # Configuration
+  config:
+    apiV1Str: "/api/v1"
+    projectName: "GenAI CloudOps API"
+    environment: "production"
+    debug: "false"
+    corsOrigins: "http://localhost:3000,http://localhost:5173,https://your-domain.com"
+    algorithm: "HS256"
+    accessTokenExpireMinutes: "30"
+    monitoringCacheTtl: "300"
+    alertHistoryHours: "24"
+    maxLogSearchResults: "1000"
+    healthScoreThresholdHealthy: "90.0"
+    healthScoreThresholdWarning: "70.0"
+    healthScoreThresholdDegraded: "50.0"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Database configuration
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "15-alpine"
+    pullPolicy: IfNotPresent
+  # Database credentials
+  database: "genai_cloudops"
+  username: "postgres"
+  password: "defaultpassword"  # Change this in production
+  # Persistence
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  # Init scripts
+  initScripts: false
+  # Resources
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Redis configuration (optional)
+redis:
+  enabled: false
+  host: "redis"
+  port: 6379
+  db: 0
+  password: ""
+
+# OCI Integration
+oci:
+  enabled: true
+  profile: "DEFAULT"
+  region: "us-ashburn-1"
+  tenancyId: ""
+  userId: ""
+  fingerprint: ""
+  # Base64 encoded private key content
+  privateKey: ""
+  # Base64 encoded public key content
+  publicKey: ""
+  # Complete config file content (base64 encoded)
+  configFile: ""
+  integration:
+    enabled: true
+  # OCI Vault Configuration
+  vault:
+    enabled: true
+    vaultId: ""  # OCID of the OCI Vault
+    compartmentId: ""  # OCID of the compartment
+    kmsKeyId: ""  # OCID of the KMS key for encryption
+    useInstancePrincipal: false  # Use instance principal auth in OKE
+    cacheTtlMinutes: 15
+    enableCaching: true
+    maxCacheSize: 1000
+
+# GenAI Configuration
+genai:
+  groqApiKey: ""  # Set this in production
+  openaiApiKey: ""  # Optional
+  groqModel: "llama3-8b-8192"
+  groqMaxTokens: 1024
+  groqTemperature: "0.7"
+  groqTimeout: "30"
+  cacheTtl: "3600"
+  rateLimitPerMinute: "100"
+  maxContextLength: "4000"
+  enableCaching: "false"
+  enableBatching: "true"
+  batchSize: "5"
+  fallbackModel: "mixtral-8x7b-32768"
+
+# Kubernetes Integration
+kubernetes:
+  integration:
+    enabled: true
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: genai-cloudops.local
+      paths:
+        frontend:
+          path: /
+          pathType: Prefix
+        backend:
+          path: /api
+          pathType: Prefix
+        websocket:
+          path: /ws
+          pathType: Prefix
+        health:
+          path: /health
+          pathType: Exact
+  tls: []
+  # cert-manager integration
+  certManager:
+    enabled: false
+    clusterIssuer: "letsencrypt-prod"
+  # OCI Load Balancer integration
+  oci:
+    loadBalancer:
+      enabled: false
+      shape: "flexible"
+      flexMin: "10"
+      flexMax: "100"
+      subnet1: ""  # Required if enabled
+      subnet2: ""  # Optional
+      securityListMode: "All"
+      loadBalancerIP: ""
+      ssl:
+        enabled: false
+        secretName: ""
+      annotations: {}
+
+# TLS configuration
+tls:
+  enabled: false
+  cert: ""  # Base64 encoded certificate
+  key: ""   # Base64 encoded private key
+
+# Autoscaling configuration
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  customMetrics: false
+  # Backend-specific settings
+  backend:
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    requestsPerSecond: "50"
+  # Frontend-specific settings
+  frontend:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  # Scaling behavior
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    percentagePolicy: 50
+    podsPolicy: 2
+    periodSeconds: 60
+  scaleUp:
+    stabilizationWindowSeconds: 60
+    percentagePolicy: 100
+    podsPolicy: 4
+    periodSeconds: 60
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  backend:
+    minAvailable: 1
+    # maxUnavailable: 50%
+  frontend:
+    minAvailable: 1
+    # maxUnavailable: 50%
+
+# RBAC configuration
+rbac:
+  create: true
+  createClusterRole: false
+  allowPodExecution: false
+  allowPodLogs: true
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  ingressNamespace: "ingress-nginx"
+
+# Monitoring configuration
+monitoring:
+  enabled: false
+  prometheus:
+    enabled: false
+    path: "/metrics"
+    interval: "30s"
+    scrapeTimeout: "10s"
+    labels: {}
+    basicAuth:
+      enabled: false
+      secretName: ""
+      usernameKey: "username"
+      passwordKey: "password"
+  frontend:
+    enabled: false
+    path: "/metrics"
+  prometheusRule:
+    enabled: false
+    labels: {}
+  alerts:
+    errorRateThreshold: 0.1
+    errorRateDuration: "5m"
+    responseTimeThreshold: 2
+    responseTimeDuration: "5m"
+    memoryThreshold: 0.9
+    memoryDuration: "5m"
+    cpuThreshold: 0.8
+    cpuDuration: "5m"
+    dbConnectionDuration: "1m"
+    rateLimitThreshold: 0.1
+    rateLimitDuration: "2m"
+  grafana:
+    enabled: false
+    labels: {}
+
+# Global node selector, tolerations, and affinity
+nodeSelector: {}
+tolerations: []
+affinity: {} 

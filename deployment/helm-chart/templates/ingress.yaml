@@ -1,0 +1,128 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-ingress
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    # OCI OKE specific annotations
+    {{- if eq .Values.ingress.className "nginx" }}
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    {{- end }}
+    {{- if .Values.ingress.tls }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certManager.clusterIssuer | default "letsencrypt-prod" }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          # Frontend routes
+          - path: {{ .paths.frontend.path | default "/" }}
+            pathType: {{ .paths.frontend.pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ include "genai-cloudops.fullname" $ }}-frontend
+                port:
+                  number: {{ $.Values.frontend.service.port }}
+          
+          # Backend API routes
+          - path: {{ .paths.backend.path | default "/api" }}
+            pathType: {{ .paths.backend.pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ include "genai-cloudops.fullname" $ }}-backend
+                port:
+                  number: {{ $.Values.backend.service.port }}
+          
+          # WebSocket endpoint for real-time features
+          - path: {{ .paths.websocket.path | default "/ws" }}
+            pathType: {{ .paths.websocket.pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ include "genai-cloudops.fullname" $ }}-backend
+                port:
+                  number: {{ $.Values.backend.service.port }}
+          
+          # Health check endpoint
+          - path: {{ .paths.health.path | default "/health" }}
+            pathType: {{ .paths.health.pathType | default "Exact" }}
+            backend:
+              service:
+                name: {{ include "genai-cloudops.fullname" $ }}-backend
+                port:
+                  number: {{ $.Values.backend.service.port }}
+    {{- end }}
+{{- end }}
+{{- if .Values.ingress.oci.loadBalancer.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-loadbalancer
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+  annotations:
+    # OCI Load Balancer annotations
+    service.beta.kubernetes.io/oci-load-balancer-shape: {{ .Values.ingress.oci.loadBalancer.shape | default "flexible" }}
+    {{- if eq .Values.ingress.oci.loadBalancer.shape "flexible" }}
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: {{ .Values.ingress.oci.loadBalancer.flexMin | default "10" | quote }}
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: {{ .Values.ingress.oci.loadBalancer.flexMax | default "100" | quote }}
+    {{- end }}
+    service.beta.kubernetes.io/oci-load-balancer-subnet1: {{ .Values.ingress.oci.loadBalancer.subnet1 | quote }}
+    {{- if .Values.ingress.oci.loadBalancer.subnet2 }}
+    service.beta.kubernetes.io/oci-load-balancer-subnet2: {{ .Values.ingress.oci.loadBalancer.subnet2 | quote }}
+    {{- end }}
+    service.beta.kubernetes.io/oci-load-balancer-security-list-management-mode: {{ .Values.ingress.oci.loadBalancer.securityListMode | default "All" }}
+    {{- if .Values.ingress.oci.loadBalancer.ssl.enabled }}
+    service.beta.kubernetes.io/oci-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/oci-load-balancer-tls-secret: {{ .Values.ingress.oci.loadBalancer.ssl.secretName }}
+    {{- end }}
+    {{- with .Values.ingress.oci.loadBalancer.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: LoadBalancer
+  {{- if .Values.ingress.oci.loadBalancer.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.ingress.oci.loadBalancer.loadBalancerIP }}
+  {{- end }}
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    {{- if .Values.ingress.oci.loadBalancer.ssl.enabled }}
+    - port: 443
+      targetPort: 80
+      protocol: TCP
+      name: https
+    {{- end }}
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
+{{- end }} 

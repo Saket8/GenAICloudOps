@@ -1,0 +1,116 @@
+# Staging environment overrides
+replicaCount: 2
+
+frontend:
+  replicaCount: 2
+  image:
+    tag: "staging"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 150m
+      memory: 256Mi
+
+backend:
+  replicaCount: 2
+  image:
+    tag: "staging"
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 750m
+      memory: 1.5Gi
+    requests:
+      cpu: 400m
+      memory: 768Mi
+  config:
+    environment: "staging"
+    debug: "false"
+    corsOrigins: "https://genai-cloudops-staging.example.com"
+
+postgres:
+  persistence:
+    enabled: true
+    size: 15Gi
+    storageClass: "oci-bv"  # OCI Block Volume
+  resources:
+    limits:
+      cpu: 500m
+      memory: 768Mi
+    requests:
+      cpu: 250m
+      memory: 384Mi
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  hosts:
+    - host: genai-cloudops-staging.example.com
+      paths:
+        frontend:
+          path: /
+          pathType: Prefix
+        backend:
+          path: /api
+          pathType: Prefix
+        websocket:
+          path: /ws
+          pathType: Prefix
+        health:
+          path: /health
+          pathType: Exact
+  tls:
+    - secretName: genai-cloudops-staging-tls
+      hosts:
+        - genai-cloudops-staging.example.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  backend:
+    minReplicas: 2
+    maxReplicas: 8
+  frontend:
+    minReplicas: 2
+    maxReplicas: 4
+
+podDisruptionBudget:
+  enabled: true
+  backend:
+    minAvailable: 1
+  frontend:
+    minAvailable: 1
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  prometheusRule:
+    enabled: true
+  grafana:
+    enabled: true
+
+networkPolicy:
+  enabled: true
+
+rbac:
+  allowPodExecution: false
+  allowPodLogs: true
+
+# Staging-specific GenAI settings
+genai:
+  enableCaching: "true"
+  rateLimitPerMinute: "500"
+
+# OCI-specific configurations for staging
+oci:
+  region: "us-ashburn-1"
+  integration:
+    enabled: true 

@@ -1,0 +1,301 @@
+[
+  {
+    "id": "task-001",
+    "title": "Setup Project Structure and Development Environment",
+    "description": "Initialize the project repository structure with separate directories for frontend (React), backend (FastAPI), deployment (Helm charts), and documentation. Setup development environment with necessary dependencies and tools.",
+    "priority": "Critical",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": [],
+    "completedDate": "2025-01-28"
+  },
+  {
+    "id": "task-002",
+    "title": "Implement Authentication and RBAC System",
+    "description": "Develop the authentication system with basic RBAC (Admin, Viewer, Operator roles) and optional OCI IAM integration. This includes user login, session management, and role-based access control throughout the application.",
+    "priority": "Critical",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-001"],
+    "completedDate": "2025-01-29"
+  },
+  {
+    "id": "task-003",
+    "title": "Setup Backend Infrastructure and API Gateway",
+    "description": "Create the FastAPI backend infrastructure with modular microservices architecture, unified API gateway for routing requests, and basic middleware for authentication and logging.",
+    "priority": "Critical",
+    "assignedTo": "Unassigned",
+    "status": "Completed",
+    "dependencies": ["task-001", "task-002"]
+  },
+  {
+    "id": "task-004",
+    "title": "Implement OCI SDK Integration Service",
+    "description": "Develop the core service for integrating with OCI SDK to fetch resource information, metrics, and manage OCI services. This includes connection setup, authentication, and basic resource discovery.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-003"],
+    "completedDate": "2025-01-30"
+  },
+  {
+    "id": "task-005",
+    "title": "Create Frontend Application Shell with Navigation",
+    "description": "Develop the main React application shell with Tailwind CSS, unified navigation system, tabbed interface for different modules, and basic layout components. Include React Query setup for data fetching.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-001", "task-002"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-006",
+    "title": "Implement Dashboard Page - OCI Resource Monitoring",
+    "description": "Develop the main dashboard page showing OCI services (VMs, Databases, OKE clusters, API Gateway, Load Balancer) in selected compartments with real-time metrics (CPU, Memory, Network, Health status) and compartment filter toggle.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-004", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-007",
+    "title": "Implement OCI Monitoring and Alerts Integration",
+    "description": "Develop backend services to integrate with OCI Monitoring API and Logging API to fetch alerts, create alert summaries, and process monitoring data for the Alerts & Insights page.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-004"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-008",
+    "title": "Setup GenAI Integration Service",
+    "description": "Create a centralized GenAI service that handles integration with OpenAI or OCI GenAI APIs, prompt engineering, response generation, caching, and batching for performance optimization across all modules.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-003"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-009",
+    "title": "Create Alerts & Insights Page",
+    "description": "Develop the frontend page to display alert summaries from OCI Monitoring, natural language explanations of issues, and GenAI-powered recommendations for problem resolution.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-007", "task-008", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-010",
+    "title": "Implement Remediation Panel Backend",
+    "description": "Develop backend services for processing GenAI recommendations, executing OCI CLI or Terraform commands, managing approval workflows, and maintaining audit trails of all remediation actions.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-008", "task-004"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-011",
+    "title": "Create Remediation Panel Frontend",
+    "description": "Develop the frontend interface for the remediation panel with GenAI recommendation display, 'Approve & Apply' buttons, action status tracking, and audit trail visualization.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-010", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-012",
+    "title": "Implement Conversational Agent (Chatbot) Backend",
+    "description": "Develop the backend service for the conversational agent that processes natural language queries, integrates with GenAI APIs using OCI context, and provides intelligent responses about infrastructure issues.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-008", "task-004"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-013",
+    "title": "Create Conversational Agent (Chatbot) Frontend",
+    "description": "Develop the chatbot UI interface (side panel or floating bot) that allows users to ask questions about infrastructure issues and receive GenAI-powered responses with OCI context.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-012", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-014",
+    "title": "Implement Kubernetes Client Integration",
+    "description": "Setup Kubernetes Python client integration to fetch RBAC roles, bindings, pod status, and logs from OKE clusters. This service will support both Access Analyzer and Pod Health modules.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-003"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-015",
+    "title": "Develop Unified Access Analyzer Backend",
+    "description": "Create backend services for the Access Analyzer module that fetches Kubernetes RBAC and OCI IAM policies, performs risk scoring, and integrates with GenAI for security recommendations and policy analysis.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-014", "task-008", "task-004"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-016",
+    "title": "Create Access Analyzer Frontend",
+    "description": "Develop the Access Analyzer tab with graph visualization of Kubernetes RoleBindings, IAM policy tables with risk scoring, AI recommendations display, search/filter capabilities, and export functionality.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-015", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-017",
+    "title": "Implement Pod Health & Log Analyzer Backend",
+    "description": "Develop backend services to monitor OKE pod status, detect issues (CrashLoopBackOff, Pending, Error states), extract and analyze logs, and integrate with GenAI for root cause analysis and remediation suggestions.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-014", "task-008"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-018",
+    "title": "Create Pod Health & Log Analyzer Frontend",
+    "description": "Develop the Pod Analyzer tab with pod status tables, error summaries, AI insight panels showing log analysis and suggested fixes, and approval mechanisms for recommended actions.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-017", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-019",
+    "title": "Implement Cost Analyzer Backend",
+    "description": "Develop backend services to fetch OCI cost reports and usage data, identify top costly resources, analyze cost trends, and integrate with GenAI for cost optimization recommendations and anomaly detection.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-008", "task-004"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-020",
+    "title": "Create Cost Analyzer Frontend",
+    "description": "Develop the Cost Analyzer tab with cost trend charts, top costly resources tables, AI optimization recommendations, and report download functionality (PDF/CSV export).",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-019", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-021",
+    "title": "Implement Real-time Data Updates",
+    "description": "Setup WebSocket connections and polling mechanisms for real-time data updates across all modules, including live metrics, alert notifications, and action status updates.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-006", "task-009", "task-011"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-022",
+    "title": "Create Containerization and Docker Setup",
+    "description": "Containerize all application components using Docker, create Dockerfiles for frontend and backend services, setup docker-compose for local development, and optimize images for production deployment.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-003", "task-005"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-023",
+    "title": "Develop Helm Charts for OKE Deployment",
+    "description": "Create comprehensive Helm charts for deploying the entire application stack on OCI OKE, including services, ingress controllers, secrets management, and configuration templates.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-022"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-024",
+    "title": "Setup OCI Vault Integration for Secrets Management",
+    "description": "Implement OCI Vault integration for secure storage and management of API keys, database credentials, and other sensitive configuration data across all services.",
+    "priority": "High",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-004", "task-023"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-025",
+    "title": "Implement Comprehensive Testing Suite",
+    "description": "Develop unit tests, integration tests, and end-to-end tests for both frontend and backend components, including GenAI integration testing, OCI SDK mocking, and UI automation tests.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-006", "task-009", "task-011", "task-013", "task-016", "task-018", "task-020"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-026",
+    "title": "Create Sample Terraform and OCI CLI Scripts",
+    "description": "Develop sample Terraform configurations and OCI CLI scripts for common remediation scenarios, including infrastructure provisioning, scaling operations, and configuration management.",
+    "priority": "Low",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-010"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-027",
+    "title": "Develop GenAI Prompt Templates and Examples",
+    "description": "Create comprehensive prompt templates for GenAI integration across all modules, including examples for infrastructure analysis, security recommendations, cost optimization, and troubleshooting scenarios.",
+    "priority": "Low",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-008"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-028",
+    "title": "Implement Optional Enhancements",
+    "description": "Add optional features including Prometheus + Grafana integration, email/Slack notifications for critical issues, and auto-remediation toggle for low-risk issues.",
+    "priority": "Low",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-021", "task-011"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-029",
+    "title": "Create Comprehensive Documentation and README",
+    "description": "Develop complete project documentation including setup instructions, API documentation, deployment guides, user manuals, and troubleshooting guides for the entire GenAI CloudOps Dashboard system.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-023", "task-026", "task-027"],
+    "completedDate": "2025-08-05"
+  },
+  {
+    "id": "task-030",
+    "title": "Performance Optimization and Security Hardening",
+    "description": "Optimize application performance through caching strategies, database optimization, and GenAI response caching. Implement security hardening including input validation, rate limiting, and secure communication protocols.",
+    "priority": "Medium",
+    "assignedTo": "AI Assistant",
+    "status": "Completed",
+    "dependencies": ["task-025", "task-024"],
+    "completedDate": "2025-08-05"
+  }
+] 

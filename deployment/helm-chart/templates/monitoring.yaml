@@ -1,0 +1,234 @@
+{{- if .Values.monitoring.enabled }}
+# ServiceMonitor for Backend
+{{- if .Values.monitoring.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-backend-monitor
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+    {{- with .Values.monitoring.prometheus.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "genai-cloudops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http
+      path: {{ .Values.monitoring.prometheus.path | default "/metrics" }}
+      interval: {{ .Values.monitoring.prometheus.interval | default "30s" }}
+      scrapeTimeout: {{ .Values.monitoring.prometheus.scrapeTimeout | default "10s" }}
+      {{- if .Values.monitoring.prometheus.basicAuth.enabled }}
+      basicAuth:
+        username:
+          name: {{ .Values.monitoring.prometheus.basicAuth.secretName }}
+          key: {{ .Values.monitoring.prometheus.basicAuth.usernameKey | default "username" }}
+        password:
+          name: {{ .Values.monitoring.prometheus.basicAuth.secretName }}
+          key: {{ .Values.monitoring.prometheus.basicAuth.passwordKey | default "password" }}
+      {{- end }}
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: "genai_cloudops_.*"
+          targetLabel: application
+          replacement: "genai-cloudops"
+---
+# ServiceMonitor for Frontend (if metrics are enabled)
+{{- if .Values.monitoring.frontend.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-frontend-monitor
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+    {{- with .Values.monitoring.prometheus.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "genai-cloudops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  endpoints:
+    - port: http
+      path: {{ .Values.monitoring.frontend.path | default "/metrics" }}
+      interval: {{ .Values.monitoring.prometheus.interval | default "30s" }}
+{{- end }}
+{{- end }}
+---
+# PrometheusRule for Alerting
+{{- if .Values.monitoring.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-alerts
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: genai-cloudops.rules
+      rules:
+        # High Error Rate Alert
+        - alert: GenAICloudOpsHighErrorRate
+          expr: |
+            (
+              rate(http_requests_total{job="{{ include "genai-cloudops.fullname" . }}-backend",status=~"5.."}[5m])
+              /
+              rate(http_requests_total{job="{{ include "genai-cloudops.fullname" . }}-backend"}[5m])
+            ) > {{ .Values.monitoring.alerts.errorRateThreshold | default 0.1 }}
+          for: {{ .Values.monitoring.alerts.errorRateDuration | default "5m" }}
+          labels:
+            severity: warning
+            service: genai-cloudops
+          annotations:
+            summary: "High error rate detected in GenAI CloudOps backend"
+            description: "Error rate is {{ printf "{{ $value }}" }} which is above the threshold of {{ .Values.monitoring.alerts.errorRateThreshold | default 0.1 }}"
+        
+        # High Response Time Alert
+        - alert: GenAICloudOpsHighResponseTime
+          expr: |
+            histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="{{ include "genai-cloudops.fullname" . }}-backend"}[5m])) > {{ .Values.monitoring.alerts.responseTimeThreshold | default 2 }}
+          for: {{ .Values.monitoring.alerts.responseTimeDuration | default "5m" }}
+          labels:
+            severity: warning
+            service: genai-cloudops
+          annotations:
+            summary: "High response time detected in GenAI CloudOps backend"
+            description: "95th percentile response time is {{ printf "{{ $value }}" }}s which is above the threshold"
+        
+        # Pod Memory Usage Alert
+        - alert: GenAICloudOpsPodHighMemory
+          expr: |
+            (
+              container_memory_working_set_bytes{pod=~"{{ include "genai-cloudops.fullname" . }}-.*"}
+              /
+              container_spec_memory_limit_bytes{pod=~"{{ include "genai-cloudops.fullname" . }}-.*"}
+            ) > {{ .Values.monitoring.alerts.memoryThreshold | default 0.9 }}
+          for: {{ .Values.monitoring.alerts.memoryDuration | default "5m" }}
+          labels:
+            severity: warning
+            service: genai-cloudops
+          annotations:
+            summary: "High memory usage detected in GenAI CloudOps pod {{ printf "{{ $labels.pod }}" }}"
+            description: "Memory usage is {{ printf "{{ $value }}" }} which is above the threshold"
+        
+        # Pod CPU Usage Alert
+        - alert: GenAICloudOpsPodHighCPU
+          expr: |
+            (
+              rate(container_cpu_usage_seconds_total{pod=~"{{ include "genai-cloudops.fullname" . }}-.*"}[5m])
+              /
+              container_spec_cpu_quota{pod=~"{{ include "genai-cloudops.fullname" . }}-.*"} * container_spec_cpu_period{pod=~"{{ include "genai-cloudops.fullname" . }}-.*"}
+            ) > {{ .Values.monitoring.alerts.cpuThreshold | default 0.8 }}
+          for: {{ .Values.monitoring.alerts.cpuDuration | default "5m" }}
+          labels:
+            severity: warning
+            service: genai-cloudops
+          annotations:
+            summary: "High CPU usage detected in GenAI CloudOps pod {{ printf "{{ $labels.pod }}" }}"
+            description: "CPU usage is {{ printf "{{ $value }}" }} which is above the threshold"
+        
+        # Database Connection Alert
+        {{- if .Values.postgres.enabled }}
+        - alert: GenAICloudOpsDBConnectionFailed
+          expr: |
+            up{job="{{ include "genai-cloudops.fullname" . }}-postgres"} == 0
+          for: {{ .Values.monitoring.alerts.dbConnectionDuration | default "1m" }}
+          labels:
+            severity: critical
+            service: genai-cloudops
+          annotations:
+            summary: "Database connection failed for GenAI CloudOps"
+            description: "PostgreSQL database is not responding"
+        {{- end }}
+        
+        # GenAI API Rate Limit Alert
+        - alert: GenAICloudOpsAPIRateLimit
+          expr: |
+            rate(genai_api_rate_limit_exceeded_total[5m]) > {{ .Values.monitoring.alerts.rateLimitThreshold | default 0.1 }}
+          for: {{ .Values.monitoring.alerts.rateLimitDuration | default "2m" }}
+          labels:
+            severity: warning
+            service: genai-cloudops
+          annotations:
+            summary: "GenAI API rate limit exceeded"
+            description: "Rate limit exceeded rate is {{ printf "{{ $value }}" }} requests per second"
+{{- end }}
+---
+# Grafana Dashboard ConfigMap
+{{- if .Values.monitoring.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-grafana-dashboard
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+    {{- with .Values.monitoring.grafana.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  genai-cloudops-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "GenAI CloudOps Dashboard",
+        "tags": ["genai", "cloudops"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{job=\"{{ include "genai-cloudops.fullname" . }}-backend\"}[5m])",
+                "legendFormat": "{{ printf "{{ method }} {{ status }}" }}"
+              }
+            ]
+          },
+          {
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"{{ include "genai-cloudops.fullname" . }}-backend\"}[5m])) * 1000",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"{{ include "genai-cloudops.fullname" . }}-backend\"}[5m])) * 1000",
+                "legendFormat": "50th percentile"
+              }
+            ]
+          },
+          {
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_working_set_bytes{pod=~\"{{ include "genai-cloudops.fullname" . }}-.*\"} / 1024 / 1024",
+                "legendFormat": "{{ printf "{{ pod }}" }}"
+              }
+            ]
+          },
+          {
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{pod=~\"{{ include "genai-cloudops.fullname" . }}-.*\"}[5m]) * 100",
+                "legendFormat": "{{ printf "{{ pod }}" }}"
+              }
+            ]
+          }
+        ]
+      }
+    }
+{{- end }}
+{{- end }} 

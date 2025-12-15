@@ -1,0 +1,207 @@
+# Production environment overrides
+replicaCount: 3
+
+frontend:
+  replicaCount: 3
+  image:
+    tag: "v1.0.0"  # Use specific version tags in production
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+backend:
+  replicaCount: 3
+  image:
+    tag: "v1.0.0"  # Use specific version tags in production
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  config:
+    environment: "production"
+    debug: "false"
+    corsOrigins: "https://genai-cloudops.example.com"
+    accessTokenExpireMinutes: "15"  # Shorter token expiry for production
+  # Enable persistence for production data
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: "oci-bv"
+  # Production security settings
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+      - ALL
+
+postgres:
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "oci-bv"  # OCI Block Volume with high performance
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  # Production database settings
+  initScripts: true
+
+# Redis for production caching
+redis:
+  enabled: true
+  host: "redis-cluster"
+  port: 6379
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: genai-cloudops.example.com
+      paths:
+        frontend:
+          path: /
+          pathType: Prefix
+        backend:
+          path: /api
+          pathType: Prefix
+        websocket:
+          path: /ws
+          pathType: Prefix
+        health:
+          path: /health
+          pathType: Exact
+  tls:
+    - secretName: genai-cloudops-tls
+      hosts:
+        - genai-cloudops.example.com
+  # Enable OCI Load Balancer for production
+  oci:
+    loadBalancer:
+      enabled: true
+      shape: "flexible"
+      flexMin: "100"
+      flexMax: "8000"
+      subnet1: "ocid1.subnet.oc1.region.aaaaaa"  # Replace with actual subnet OCID
+      subnet2: "ocid1.subnet.oc1.region.bbbbbb"  # Replace with actual subnet OCID
+      ssl:
+        enabled: true
+        secretName: "genai-cloudops-tls"
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60  # More conservative for production
+  targetMemoryUtilizationPercentage: 70
+  customMetrics: true
+  backend:
+    minReplicas: 3
+    maxReplicas: 50
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+    requestsPerSecond: "100"
+  frontend:
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  backend:
+    minAvailable: 2
+  frontend:
+    minAvailable: 2
+
+rbac:
+  create: true
+  createClusterRole: true
+  allowPodExecution: false
+  allowPodLogs: true
+
+networkPolicy:
+  enabled: true
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    basicAuth:
+      enabled: true
+      secretName: "prometheus-auth"
+  prometheusRule:
+    enabled: true
+  alerts:
+    errorRateThreshold: 0.05  # Stricter thresholds for production
+    responseTimeThreshold: 1
+    memoryThreshold: 0.85
+    cpuThreshold: 0.7
+  grafana:
+    enabled: true
+
+# Production GenAI settings
+genai:
+  enableCaching: "true"
+  rateLimitPerMinute: "100"  # Conservative rate limiting
+  enableBatching: "true"
+  batchSize: "3"  # Smaller batch size for faster response
+
+# Production OCI configuration
+oci:
+  enabled: true
+  region: "us-ashburn-1"  # Set appropriate region
+  integration:
+    enabled: true
+  # Production Vault configuration
+  vault:
+    enabled: true
+    useInstancePrincipal: true  # Use instance principal in OKE
+    cacheTtlMinutes: 10  # Shorter cache in production
+    enableCaching: true
+    maxCacheSize: 500
+
+# Production node placement
+nodeSelector:
+  nodepool: "production"
+
+# Production tolerations for dedicated nodes
+tolerations:
+  - key: "production"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+# Anti-affinity for high availability
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - genai-cloudops
+        topologyKey: kubernetes.io/hostname 

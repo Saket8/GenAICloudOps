@@ -1,0 +1,155 @@
+{{- if .Values.autoscaling.enabled }}
+# Backend HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-backend-hpa
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "genai-cloudops.fullname" . }}-backend
+  minReplicas: {{ .Values.autoscaling.backend.minReplicas | default .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.backend.maxReplicas | default .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.backend.targetCPUUtilizationPercentage | default .Values.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.backend.targetMemoryUtilizationPercentage | default .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.autoscaling.customMetrics }}
+    # Custom metrics for GenAI workloads
+    - type: Pods
+      pods:
+        metric:
+          name: requests_per_second
+        target:
+          type: AverageValue
+          averageValue: {{ .Values.autoscaling.backend.requestsPerSecond | default "50" }}
+    {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.autoscaling.scaleDown.stabilizationWindowSeconds | default 300 }}
+      policies:
+        - type: Percent
+          value: {{ .Values.autoscaling.scaleDown.percentagePolicy | default 50 }}
+          periodSeconds: {{ .Values.autoscaling.scaleDown.periodSeconds | default 60 }}
+        - type: Pods
+          value: {{ .Values.autoscaling.scaleDown.podsPolicy | default 2 }}
+          periodSeconds: {{ .Values.autoscaling.scaleDown.periodSeconds | default 60 }}
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.autoscaling.scaleUp.stabilizationWindowSeconds | default 60 }}
+      policies:
+        - type: Percent
+          value: {{ .Values.autoscaling.scaleUp.percentagePolicy | default 100 }}
+          periodSeconds: {{ .Values.autoscaling.scaleUp.periodSeconds | default 60 }}
+        - type: Pods
+          value: {{ .Values.autoscaling.scaleUp.podsPolicy | default 4 }}
+          periodSeconds: {{ .Values.autoscaling.scaleUp.periodSeconds | default 60 }}
+      selectPolicy: Max
+---
+# Frontend HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-frontend-hpa
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "genai-cloudops.fullname" . }}-frontend
+  minReplicas: {{ .Values.autoscaling.frontend.minReplicas | default .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.frontend.maxReplicas | default .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.frontend.targetCPUUtilizationPercentage | default .Values.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.frontend.targetMemoryUtilizationPercentage | default .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{ .Values.autoscaling.scaleDown.stabilizationWindowSeconds | default 300 }}
+      policies:
+        - type: Percent
+          value: {{ .Values.autoscaling.scaleDown.percentagePolicy | default 25 }}
+          periodSeconds: {{ .Values.autoscaling.scaleDown.periodSeconds | default 60 }}
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.autoscaling.scaleUp.stabilizationWindowSeconds | default 60 }}
+      policies:
+        - type: Percent
+          value: {{ .Values.autoscaling.scaleUp.percentagePolicy | default 50 }}
+          periodSeconds: {{ .Values.autoscaling.scaleUp.periodSeconds | default 60 }}
+      selectPolicy: Max
+{{- end }}
+---
+{{- if .Values.podDisruptionBudget.enabled }}
+# Backend PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-backend-pdb
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  {{- if .Values.podDisruptionBudget.backend.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.backend.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.backend.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.backend.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "genai-cloudops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+---
+# Frontend PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-frontend-pdb
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  {{- if .Values.podDisruptionBudget.frontend.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.frontend.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.frontend.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.frontend.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "genai-cloudops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+{{- end }} 

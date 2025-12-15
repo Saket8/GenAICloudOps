@@ -1,0 +1,226 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "genai-cloudops.serviceAccountName" . }}
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken | default true }}
+{{- end }}
+---
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-role
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+rules:
+  # Allow reading ConfigMaps for configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  
+  # Allow reading Secrets for credentials
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  
+  # Allow reading Pods for monitoring and health checks
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  
+  # Allow reading Services for service discovery
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+  
+  # Allow reading Events for troubleshooting
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  
+  {{- if .Values.rbac.allowPodExecution }}
+  # Allow pod execution for remote debugging/maintenance
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  {{- end }}
+  
+  {{- if .Values.rbac.allowPodLogs }}
+  # Allow reading pod logs for monitoring
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+  {{- end }}
+  
+  {{- if .Values.kubernetes.integration.enabled }}
+  # Kubernetes integration permissions
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+  {{- end }}
+  
+  {{- if .Values.monitoring.prometheus.enabled }}
+  # Prometheus monitoring permissions
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch"]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-rolebinding
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "genai-cloudops.fullname" . }}-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "genai-cloudops.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+---
+{{- if .Values.rbac.createClusterRole }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-cluster-role
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+rules:
+  # Cross-namespace resource monitoring
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/metrics", "nodes/stats"]
+    verbs: ["get", "list", "watch"]
+  
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+  
+  # Cluster-wide metrics access
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["nodes", "pods"]
+    verbs: ["get", "list"]
+  
+  {{- if .Values.oci.integration.enabled }}
+  # OCI integration permissions
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch"]
+  
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  {{- end }}
+  
+  {{- if .Values.oci.vault.enabled }}
+  # OCI Vault permissions (via instance principal)
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    verbs: ["create"]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-cluster-rolebinding
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "genai-cloudops.fullname" . }}-cluster-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "genai-cloudops.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+---
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "genai-cloudops.fullname" . }}-network-policy
+  labels:
+    {{- include "genai-cloudops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "genai-cloudops.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ .Values.networkPolicy.ingressNamespace | default "ingress-nginx" }}
+    
+    # Allow inter-service communication
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "genai-cloudops.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8000  # Backend
+        - protocol: TCP
+          port: 80    # Frontend
+        - protocol: TCP
+          port: 5432  # Database
+  
+  egress:
+    # Allow DNS resolution
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+    
+    # Allow HTTPS for external API calls
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+    
+    # Allow HTTP for health checks and external services
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 80
+    
+    # Allow OCI API access
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+    
+    {{- if .Values.postgres.enabled }}
+    # Allow database access
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "genai-cloudops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: database
+      ports:
+        - protocol: TCP
+          port: 5432
+    {{- end }}
+{{- end }} 

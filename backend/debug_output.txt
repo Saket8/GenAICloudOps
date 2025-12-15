@@ -1,0 +1,52 @@
+C:\Users\saura503\AppData\Roaming\Python\Python310\site-packages\pydantic\_internal\_fields.py:149: UserWarning: Field "model_used" has conflict with protected namespace "model_".
+
+You may be able to resolve this warning by setting `model_config['protected_namespaces'] = ()`.
+  warnings.warn(
+C:\Users\saura503\AppData\Roaming\Python\Python310\site-packages\pydantic\_internal\_config.py:318: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+Using mock vault implementation (OCI disabled or USE_DUMMY_VAULT=True).
+Redis connection failed: Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.. Proceeding without caching.
+DEBUG: Initializing OCIService (USE_DUMMY_OCI=False)...
+================================================================================
+
+DEBUG: Fetching compartments from OCI...
+
+DEBUG: Retrieved 33 compartments.
+
+NAME                                     | ID                             | PARENT ID
+----------------------------------------------------------------------------------------------------
+Application                              | ...2aq64tbnsa                  | ...cmsav6ehma
+Database                                 | ...75blf7ywbq                  | ...cmsav6ehma
+Root Tenancy                             | ...tfccizi5wq                  | ...None
+Storage                                  | ...lytwhcqv4a                  | ...cmsav6ehma
+brminfra_isg                             | ...cmsav6ehma                  | ...tfccizi5wq
+cmp-oe-brm-p                             | ...m4qoruy3ea                  | ...cmsav6ehma
+cmp-oe-brm-p-compute                     | ...uziejgysca                  | ...m4qoruy3ea
+cmp-oe-brm-p-compute-dr                  | ...rvns7tomta                  | ...uziejgysca
+cmp-oe-brm-p-compute-mig                 | ...e4cbtwf2xa                  | ...uziejgysca
+cmp-oe-brm-p-compute-prod                | ...siovhidvqa                  | ...uziejgysca
+cmp-oe-brm-p-db                          | ...hrs4z2ccwa                  | ...m4qoruy3ea
+cmp-oe-brm-p-db-dr                       | ...fcebiv4sgq                  | ...hrs4z2ccwa
+cmp-oe-brm-p-db-mig                      | ...nyny4hxlxq                  | ...hrs4z2ccwa
+cmp-oe-brm-p-db-prod                     | ...vys536dtga                  | ...hrs4z2ccwa
+cmp-oe-brm-p-logging                     | ...o7tsrmeaba                  | ...m4qoruy3ea
+cmp-oe-brm-p-logging-dr                  | ...i4gim4bsnq                  | ...o7tsrmeaba
+cmp-oe-brm-p-logging-mig                 | ...iabm2xat4a                  | ...o7tsrmeaba
+cmp-oe-brm-p-logging-prod                | ...hpdaqtxt7a                  | ...o7tsrmeaba
+cmp-oe-brm-p-network                     | ...ogke5iaukq                  | ...m4qoruy3ea
+cmp-oe-brm-p-network-dr                  | ...wyc5ykll6a                  | ...ogke5iaukq
+cmp-oe-brm-p-network-mig                 | ...uapflano5q                  | ...ogke5iaukq
+cmp-oe-brm-p-network-prod                | ...shngat63mq                  | ...ogke5iaukq
+cmp-oe-brm-p-security                    | ...acruy3kwcq                  | ...m4qoruy3ea
+cmp-oe-brm-p-storage                     | ...wnhx6todva                  | ...m4qoruy3ea
+cmp-oe-brm-p-storage-dr                  | ...tyno2nrgaa                  | ...wnhx6todva
+cmp-oe-brm-p-storage-mig                 | ...lmzdsah6ba                  | ...wnhx6todva
+cmp-oe-brm-p-storage-prod                | ...y3d4zioz4q                  | ...wnhx6todva
+network                                  | ...hts4pr4cua                  | ...cmsav6ehma
+smartinfra                               | ...cm33prnnda                  | ...cmsav6ehma
+training                                 | ...635goyfh4q                  | ...cmsav6ehma
+training-compute                         | ...k2t5m32rja                  | ...635goyfh4q
+training-database                        | ...5fdfsaz4va                  | ...635goyfh4q
+training-storage                         | ...46w7ze4r5q                  | ...635goyfh4q
+================================================================================

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI CloudOps Dashboard - Project Status Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .progress-bar-fill {
+            transition: width 1s ease-in-out;
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(17, 24, 39, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full bg-gray-800 bg-opacity-95 backdrop-blur-sm z-50 border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-cloud text-blue-400 text-2xl mr-2"></i>
+                        <span class="text-xl font-bold">GenAI CloudOps</span>
+                    </div>
+                    <div class="hidden md:ml-10 md:flex md:space-x-8">
+                        <a href="#" class="text-blue-400 hover:text-blue-300 px-3 py-2 text-sm font-medium">Home</a>
+                        <a href="#" class="text-gray-300 hover:text-blue-300 px-3 py-2 text-sm font-medium">Dashboard</a>
+                        <a href="#" class="text-gray-300 hover:text-blue-300 px-3 py-2 text-sm font-medium">Contact</a>
+                        <a href="https://github.com/souravb-dev/GenAIOps" target="_blank" class="text-gray-300 hover:text-blue-300 px-3 py-2 text-sm font-medium flex items-center">
+                            <i class="fab fa-github mr-1"></i>View Source
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-sm text-gray-300">Project Status Tracker</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="pt-16">
+        <div class="bg-gradient-to-r from-blue-900 to-purple-900 py-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h1 class="text-4xl md:text-6xl font-bold mb-4">
+                    <span class="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        GenAI CloudOps Dashboard
+                    </span>
+                </h1>
+                <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                    A comprehensive project management dashboard for tracking the development of an AI-powered cloud operations monitoring and management platform
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Overview -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <div class="bg-gray-800 rounded-lg p-6 card-hover">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-blue-400" id="totalTasks">30</div>
+                    <div class="text-gray-400 text-sm">Total Tasks</div>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6 card-hover">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-green-400" id="completedTasks">30</div>
+                    <div class="text-gray-400 text-sm">Completed</div>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6 card-hover">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-yellow-400" id="inProgressTasks">0</div>
+                    <div class="text-gray-400 text-sm">In Progress</div>
+                </div>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6 card-hover">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-red-400" id="pendingTasks">0</div>
+                    <div class="text-gray-400 text-sm">Pending</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4">Overall Progress</h3>
+            <div class="bg-gray-700 rounded-full h-4 mb-4">
+                <div class="bg-gradient-to-r from-blue-500 to-green-500 h-4 rounded-full progress-bar-fill" style="width: 100%"></div>
+            </div>
+            <div class="flex justify-between text-sm text-gray-400">
+                <span>Project Started</span>
+                <span class="text-green-400 font-semibold">🎉 100% COMPLETE!</span>
+                <span>August 2025 Delivered</span>
+            </div>
+            <div class="mt-4 text-center">
+                <span class="bg-green-900 text-green-400 px-3 py-1 rounded-full text-sm">
+                    <i class="fas fa-trophy mr-1"></i>🎊 ALL 30 TASKS COMPLETED! 🎊 Production-Ready GenAI CloudOps Platform - Completed August 05, 2025!
+                </span>
+            </div>
+        </div>
+
+        <!-- Task Status Table -->
+        <div class="bg-gray-800 rounded-lg overflow-hidden mb-8">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <h3 class="text-lg font-semibold">Task Status Overview</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Priority</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Dependencies</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700" id="taskTableBody">
+                        <!-- Tasks will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Environment Status -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Development Environment Status</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>Project Structure Created</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>React + TypeScript Setup Complete</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>FastAPI Backend Structure Ready</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>Authentication & RBAC System Complete</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>Development Environment Ready</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>Backend Infrastructure & API Gateway Complete</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>Frontend Application Shell Complete</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>OCI Resource Dashboard Complete</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span>OCI Monitoring & Alerts Integration Complete</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-semibold mb-4">Technology Stack</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-700 rounded-lg p-4 text-center">
+                        <i class="fab fa-react text-blue-400 text-2xl mb-2"></i>
+                        <div class="text-sm font-medium">Frontend</div>
+                        <div class="text-xs text-gray-400">React + Tailwind</div>
+                        <span class="inline-block bg-green-900 text-green-400 px-2 py-1 rounded-full text-xs mt-2">Ready</span>
+                    </div>
+                    <div class="bg-gray-700 rounded-lg p-4 text-center">
+                        <i class="fab fa-python text-green-400 text-2xl mb-2"></i>
+                        <div class="text-sm font-medium">Backend</div>
+                        <div class="text-xs text-gray-400">FastAPI + OCI SDK</div>
+                        <span class="inline-block bg-green-900 text-green-400 px-2 py-1 rounded-full text-xs mt-2">Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Production Deployment & Next Steps -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4">🚀 Production Deployment & Next Steps</h3>
+            <div class="bg-green-900 bg-opacity-50 border border-green-400 rounded-lg p-4 mb-4">
+                <p class="text-green-300 font-medium">🎉 Platform Complete - Ready for Production Deployment!</p>
+            </div>
+
+            <!-- Deployment Options -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="bg-blue-900 bg-opacity-30 border border-blue-400 rounded-lg p-4">
+                    <h4 class="text-blue-300 font-semibold mb-3 flex items-center">
+                        <i class="fas fa-cloud mr-2"></i>Cloud Deployment
+                    </h4>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li class="flex items-center">
+                            <i class="fas fa-helm text-blue-400 mr-2"></i>
+                            Deploy using Helm charts on OKE
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-docker text-blue-400 mr-2"></i>
+                            Docker containers ready for production
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-shield-alt text-blue-400 mr-2"></i>
+                            OCI Vault secrets management integrated
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-chart-line text-blue-400 mr-2"></i>
+                            Performance monitoring enabled
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-purple-900 bg-opacity-30 border border-purple-400 rounded-lg p-4">
+                    <h4 class="text-purple-300 font-semibold mb-3 flex items-center">
+                        <i class="fas fa-cogs mr-2"></i>Operational Excellence
+                    </h4>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li class="flex items-center">
+                            <i class="fas fa-robot text-purple-400 mr-2"></i>
+                            AI-powered automated remediation
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-comments text-purple-400 mr-2"></i>
+                            Conversational AI chatbot ready
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-bell text-purple-400 mr-2"></i>
+                            Real-time alerts & notifications
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-analytics text-purple-400 mr-2"></i>
+                            Advanced cost optimization
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Start Actions -->
+            <div class="bg-gray-700 rounded-lg p-4 mb-4">
+                <h4 class="text-gray-200 font-semibold mb-3">Quick Start Actions:</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div class="bg-green-600 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-play text-white"></i>
+                        </div>
+                        <p class="text-sm text-gray-300">Launch with Docker Compose</p>
+                        <code class="text-xs text-green-400">docker-compose up -d</code>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-blue-600 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-helm text-white"></i>
+                        </div>
+                        <p class="text-sm text-gray-300">Deploy to Kubernetes</p>
+                        <code class="text-xs text-blue-400">helm install genai-cloudops ./deployment/helm-chart</code>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-purple-600 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-book text-white"></i>
+                        </div>
+                        <p class="text-sm text-gray-300">Review Documentation</p>
+                        <code class="text-xs text-purple-400">docs/INSTALLATION.md</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Future Enhancement Opportunities -->
+            <div class="bg-gradient-to-r from-indigo-900 to-purple-900 bg-opacity-50 rounded-lg p-4">
+                <h4 class="text-indigo-300 font-semibold mb-3 flex items-center">
+                    <i class="fas fa-lightbulb mr-2"></i>Future Enhancement Opportunities
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+                    <div>
+                        <p class="font-medium text-white mb-1">🔮 AI/ML Enhancements:</p>
+                        <ul class="ml-4 space-y-1">
+                            <li>• Predictive analytics for cost trends</li>
+                            <li>• Advanced anomaly detection</li>
+                            <li>• Smart resource recommendations</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <p class="font-medium text-white mb-1">🌐 Multi-Cloud Support:</p>
+                        <ul class="ml-4 space-y-1">
+                            <li>• AWS integration expansion</li>
+                            <li>• Azure monitoring capabilities</li>
+                            <li>• Cross-cloud cost comparison</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-sm text-gray-400 text-center">
+                <span class="font-medium">🎯 Status:</span> Production-Ready Enterprise Platform | 
+                <span class="font-medium">📊 Completion:</span> 100% (30/30 Tasks) | 
+                <span class="font-medium">🚀 Ready For:</span> Immediate Deployment
+            </div>
+        </div>
+
+        <!-- Priority Breakdown -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold mb-4">Priority Breakdown</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-red-900 bg-opacity-30 border border-red-400 rounded-lg p-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-red-400">3</div>
+                        <div class="text-red-300 text-sm">Critical Priority</div>
+                        <div class="text-xs text-gray-400 mt-1">Foundation Tasks</div>
+                    </div>
+                </div>
+                <div class="bg-yellow-900 bg-opacity-30 border border-yellow-400 rounded-lg p-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-yellow-400">11</div>
+                        <div class="text-yellow-300 text-sm">High Priority</div>
+                        <div class="text-xs text-gray-400 mt-1">Core Features</div>
+                    </div>
+                </div>
+                <div class="bg-blue-900 bg-opacity-30 border border-blue-400 rounded-lg p-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-400">16</div>
+                        <div class="text-blue-300 text-sm">Medium/Low Priority</div>
+                        <div class="text-xs text-gray-400 mt-1">Advanced Features</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 border-t border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="text-gray-400 text-sm">
+                    © 2025 GenAI CloudOps Dashboard. All rights reserved.
+                </div>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-blue-400 text-sm">Full Dashboard</a>
+                    <a href="#" class="text-gray-400 hover:text-blue-400 text-sm">Project README</a>
+                    <a href="#" class="text-gray-400 hover:text-blue-400 text-sm">View Source</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Task data based on actual taskmaster structure
+        const tasks = [
+            { id: 'task-001', title: 'Setup Project Structure and Development Environment', status: 'Done', priority: 'Critical', dependencies: 'None' },
+            { id: 'task-002', title: 'Implement Authentication and RBAC System', status: 'Done', priority: 'Critical', dependencies: 'task-001' },
+            { id: 'task-003', title: 'Setup Backend Infrastructure and API Gateway', status: 'Done', priority: 'Critical', dependencies: 'task-001, task-002' },
+            { id: 'task-004', title: 'Implement OCI SDK Integration Service', status: 'Done', priority: 'High', dependencies: 'task-003' },
+            { id: 'task-005', title: 'Create Frontend Application Shell with Navigation', status: 'Done', priority: 'High', dependencies: 'task-001, task-002' },
+            { id: 'task-006', title: 'Implement Dashboard Page - OCI Resource Monitoring', status: 'Done', priority: 'High', dependencies: 'task-004, task-005' },
+            { id: 'task-007', title: 'Implement OCI Monitoring and Alerts Integration', status: 'Done', priority: 'High', dependencies: 'task-004' },
+            { id: 'task-008', title: 'Setup GenAI Integration Service', status: 'Done', priority: 'High', dependencies: 'task-003' },
+            { id: 'task-009', title: 'Create Alerts & Insights Page', status: 'Done', priority: 'High', dependencies: 'task-007, task-008, task-005' },
+            { id: 'task-010', title: 'Implement Remediation Panel Backend', status: 'Done', priority: 'High', dependencies: 'task-008, task-004' },
+            { id: 'task-011', title: 'Create Remediation Panel Frontend', status: 'Done', priority: 'High', dependencies: 'task-010, task-005' },
+            { id: 'task-012', title: 'Implement Conversational Agent (Chatbot) Backend', status: 'Done', priority: 'Medium', dependencies: 'task-008, task-004' },
+            { id: 'task-013', title: 'Create Conversational Agent (Chatbot) Frontend', status: 'Done', priority: 'Medium', dependencies: 'task-012, task-005' },
+            { id: 'task-014', title: 'Implement Kubernetes Client Integration', status: 'Done', priority: 'Medium', dependencies: 'task-003' },
+            { id: 'task-015', title: 'Develop Unified Access Analyzer Backend', status: 'Done', priority: 'Medium', dependencies: 'task-014, task-008, task-004' },
+            { id: 'task-016', title: 'Create Access Analyzer Frontend', status: 'Done', priority: 'Medium', dependencies: 'task-015, task-005' },
+            { id: 'task-017', title: 'Implement Pod Health & Log Analyzer Backend', status: 'Done', priority: 'Medium', dependencies: 'task-014, task-008' },
+            { id: 'task-018', title: 'Create Pod Health & Log Analyzer Frontend', status: 'Done', priority: 'Medium', dependencies: 'task-017, task-005' },
+            { id: 'task-019', title: 'Implement Cost Analyzer Backend', status: 'Done', priority: 'Medium', dependencies: 'task-008, task-004' },
+            { id: 'task-020', title: 'Create Cost Analyzer Frontend', status: 'Done', priority: 'Medium', dependencies: 'task-019, task-005' },
+            { id: 'task-021', title: 'Implement Real-time Data Updates', status: 'Done', priority: 'Medium', dependencies: 'task-006, task-009, task-011' },
+            { id: 'task-022', title: 'Create Containerization and Docker Setup', status: 'Done', priority: 'High', dependencies: 'task-003, task-005' },
+            { id: 'task-023', title: 'Develop Helm Charts for OKE Deployment', status: 'Done', priority: 'High', dependencies: 'task-022' },
+            { id: 'task-024', title: 'Setup OCI Vault Integration for Secrets Management', status: 'Done', priority: 'High', dependencies: 'task-004, task-023' },
+            { id: 'task-025', title: 'Implement Comprehensive Testing Suite', status: 'Done', priority: 'Medium', dependencies: 'task-006, task-009, task-011, task-013, task-016, task-018, task-020' },
+            { id: 'task-026', title: 'Create Sample Terraform and OCI CLI Scripts', status: 'Done', priority: 'Low', dependencies: 'task-010' },
+            { id: 'task-027', title: 'Develop GenAI Prompt Templates and Examples', status: 'Done', priority: 'Low', dependencies: 'task-008' },
+            { id: 'task-028', title: 'Implement Optional Enhancements', status: 'Done', priority: 'Low', dependencies: 'task-021, task-011' },
+            { id: 'task-029', title: 'Create Comprehensive Documentation and README', status: 'Done', priority: 'Medium', dependencies: 'task-023, task-026, task-027' },
+            { id: 'task-030', title: 'Performance Optimization and Security Hardening', status: 'Done', priority: 'Medium', dependencies: 'task-025, task-024' }
+        ];
+
+        // Populate task table
+        function populateTaskTable() {
+            const tbody = document.getElementById('taskTableBody');
+            tbody.innerHTML = '';
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-700 transition-colors duration-200';
+                
+                const statusBadge = getStatusBadge(task.status);
+                const priorityBadge = getPriorityBadge(task.priority);
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-300">${task.id}</td>
+                    <td class="px-6 py-4 text-sm text-gray-300 max-w-xs truncate" title="${task.title}">${task.title}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${priorityBadge}</td>
+                    <td class="px-6 py-4 text-sm text-gray-400 max-w-xs truncate" title="${task.dependencies}">${task.dependencies}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'Done': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-400"><i class="fas fa-check mr-1"></i>Done</span>',
+                'Completed': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900 text-green-400"><i class="fas fa-check mr-1"></i>Completed</span>',
+                'In Progress': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-900 text-yellow-400"><i class="fas fa-spinner mr-1"></i>In Progress</span>',
+                'To Do': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700 text-gray-300"><i class="fas fa-clock mr-1"></i>To Do</span>'
+            };
+            return badges[status] || badges['To Do'];
+        }
+
+        function getPriorityBadge(priority) {
+            const badges = {
+                'Critical': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900 text-red-400">Critical</span>',
+                'High': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-900 text-orange-400">High</span>',
+                'Medium': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-900 text-blue-400">Medium</span>',
+                'Low': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-600 text-gray-300">Low</span>'
+            };
+            return badges[priority] || badges['Medium'];
+        }
+
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const timestamp = now.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.querySelectorAll('.timestamp').forEach(el => {
+                el.textContent = timestamp;
+            });
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            populateTaskTable();
+            updateTimestamp();
+            
+            // Animate progress bar
+            setTimeout(() => {
+                const progressBar = document.querySelector('.progress-bar-fill');
+                progressBar.style.width = '87%';
+            }, 500);
+        });
+
+        // Update stats every 30 seconds (in a real implementation, this would fetch from an API)
+        setInterval(() => {
+            // In a real implementation, you would fetch updated task data here
+            console.log('Checking for task updates...');
+        }, 30000);
+    </script>
+</body>
+</html> 
