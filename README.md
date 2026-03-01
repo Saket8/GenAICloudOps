@@ -108,98 +108,87 @@ If any metric cannot be produced by runtime/provider, UI shows `Not Available`.
 
 ### High-Level System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           FRONTEND (React + TypeScript)                     │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────┐ │
-│  │  Dashboard  │ │ Cloud Intel │ │  Monitoring │ │Cost Analyzer│ │Chatbot │ │
-│  │    Page     │ │    Hub      │ │    Page     │ │    Page     │ │ Panel  │ │
-│  └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └────┬───┘ │
-│         │               │               │               │              │     │
-│  ┌──────▼───────────────▼───────────────▼───────────────▼──────────────▼───┐ │
-│  │                      API Client (Axios + React Query)                   │ │
-│  │                      • JWT Authentication                               │ │
-│  │                      • Request Interceptors                             │ │
-│  │                      • Error Handling                                   │ │
-│  └─────────────────────────────┬───────────────────────────────────────────┘ │
-└────────────────────────────────┼────────────────────────────────────────────┘
-                                 │ HTTP REST / WebSocket
-┌────────────────────────────────▼────────────────────────────────────────────┐
-│                          BACKEND (FastAPI + Python)                         │
-│  ┌─────────────────────────────────────────────────────────────────────────┐ │
-│  │                           API Layer (/api/v1)                           │ │
-│  │  ┌────────┐ ┌──────────┐ ┌────────────┐ ┌───────────┐ ┌──────────────┐  │ │
-│  │  │  Auth  │ │  Cloud   │ │Intelligence│ │ Chatbot   │ │  Kubernetes  │  │ │
-│  │  │/auth/* │ │/cloud/*  │ │/intel/*    │ │/chatbot/* │ │/kubernetes/* │  │ │
-│  │  └────────┘ └──────────┘ └────────────┘ └───────────┘ └──────────────┘  │ │
-│  └─────────────────────────────┬───────────────────────────────────────────┘ │
-│  ┌─────────────────────────────▼───────────────────────────────────────────┐ │
-│  │                          Service Layer                                  │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │ │
-│  │  │ OCIService   │ │IntelService  │ │GenAIService  │ │MonitoringService │ │ │
-│  │  │cloud_service │ │intelligence  │ │genai_service │ │monitoring_service│ │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘ │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │ │
-│  │  │ChatbotService│ │CostAnalyzer  │ │K8sService    │ │CacheService      │ │ │
-│  │  │chatbot_svc   │ │cost_analyzer │ │kubernetes_svc│ │cache_service     │ │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘ │ │
-│  └─────────────────────────────┬───────────────────────────────────────────┘ │
-└────────────────────────────────┼────────────────────────────────────────────┘
-                                 │ OCI SDK / Kubernetes Client
-┌────────────────────────────────▼────────────────────────────────────────────┐
-│                     ORACLE CLOUD INFRASTRUCTURE (OCI)                       │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
-│  │  Compute   │ │  Database  │ │    OKE     │ │   Audit    │ │ Monitoring │ │
-│  │ Instances  │ │  Services  │ │  Clusters  │ │    API     │ │    API     │ │
-│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
-│  │    IAM     │ │   Vault    │ │    VCN     │ │   Object   │ │    Load    │ │
-│  │  Policies  │ │  Secrets   │ │  Network   │ │  Storage   │ │  Balancer  │ │
-│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph FE[Frontend (React + TypeScript)]
+        DASH[Dashboard + Operations Modules]
+        HEADER[Header AI Assistant<br/>ChatbotPanel]
+        OI[Operational Insights<br/>AI Assistance + Prompt Library]
+        API[API Clients<br/>Axios + fetch SSE + React Query]
+        DASH --> API
+        HEADER --> API
+        OI --> API
+    end
+
+    API -->|REST + SSE + WS| GATE[/FastAPI API Gateway<br/>/api/v1/*/]
+
+    subgraph BE[Backend Runtime]
+        AUTH[Auth + RBAC<br/>/auth/*]
+        DOMAIN[Cloud + Intelligence + Monitoring<br/>Cost + K8s + Remediation]
+        HCHAT[Header Assistant Path<br/>/chatbot/chat/enhanced]
+        OROUTES[ODAOS Path<br/>/odaos/chat/stream<br/>/odaos/prompts/:prompt_id/execute]
+        BRIDGE[odaos_bridge + odaos_core services]
+        PRIMARY[create_llm provider factory]
+        FALLBACK[genai_service fallback]
+    end
+
+    GATE --> AUTH
+    GATE --> DOMAIN
+    GATE --> HCHAT
+    GATE --> OROUTES
+    HCHAT --> PRIMARY
+    HCHAT --> FALLBACK
+    OROUTES --> BRIDGE
+
+    subgraph EXT[Data + External Systems]
+        OCI[OCI APIs]
+        BRMDB[Oracle BRM / DBA data sources]
+        LLM[LLM Providers<br/>Groq/OpenRouter/Ollama/Anthropic/Gemini]
+        STORE[Prompt store + app DB + cache]
+    end
+
+    DOMAIN --> OCI
+    BRIDGE --> BRMDB
+    PRIMARY --> LLM
+    BRIDGE --> LLM
+    AUTH --> STORE
+    OROUTES --> STORE
 ```
 
 ### Request Lifecycle Flow
 
-```
-┌─────────┐    ┌──────────┐    ┌────────────┐    ┌────────────┐    ┌─────────┐
-│  User   │───▶│  React   │───▶│   Axios    │───▶│  FastAPI   │───▶│   OCI   │
-│ Action  │    │Component │    │API Client  │    │  Backend   │    │   SDK   │
-└─────────┘    └──────────┘    └────────────┘    └────────────┘    └─────────┘
-     │              │                │                 │                │
-     │              │                │                 │                │
-     │    ┌─────────▼────────┐       │                 │                │
-     │    │ React Query      │       │                 │                │
-     │    │ - Cache results  │       │                 │                │
-     │    │ - Refetch logic  │       │                 │                │
-     │    └─────────┬────────┘       │                 │                │
-     │              │                │                 │                │
-     │              │    ┌───────────▼────────────┐    │                │
-     │              │    │ JWT Token Injection    │    │                │
-     │              │    │ Authorization Header   │    │                │
-     │              │    └───────────┬────────────┘    │                │
-     │              │                │                 │                │
-     │              │                │    ┌────────────▼───────────┐    │
-     │              │                │    │ Authentication Check   │    │
-     │              │                │    │ - Verify JWT           │    │
-     │              │                │    │ - Extract user context │    │
-     │              │                │    └────────────┬───────────┘    │
-     │              │                │                 │                │
-     │              │                │    ┌────────────▼───────────┐    │
-     │              │                │    │ Service Layer          │    │
-     │              │                │    │ - Business logic       │    │
-     │              │                │    │ - Cache check          │    │
-     │              │                │    └────────────┬───────────┘    │
-     │              │                │                 │                │
-     │              │                │                 │    ┌───────────▼──────┐
-     │              │                │                 │    │ OCI API Calls    │
-     │              │                │                 │    │ - Compute        │
-     │              │                │                 │    │ - Database       │
-     │              │                │                 │    │ - Monitoring     │
-     │              │                │                 │    └───────────┬──────┘
-     │              │                │                 │                │
-     ◀──────────────┴────────────────┴─────────────────┴────────────────┘
-                              Response Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend UI
+    participant API as FastAPI (/api/v1)
+    participant HC as ChatbotService
+    participant OB as ODAOS Bridge/Core
+    participant LLM as Active LLM Provider
+    participant DATA as OCI + Oracle DB + Prompt Store
+
+    U->>FE: Ask question or execute prompt
+    FE->>API: JWT-authenticated request
+
+    alt Header AI Assistant
+        API->>HC: POST /chatbot/chat/enhanced (+ oci_context)
+        HC->>HC: Intent recognition + context enrichment
+        HC->>LLM: create_llm() primary path
+        opt Provider failure
+            HC->>HC: fallback to genai_service
+        end
+        LLM-->>HC: response + usage metadata
+        HC-->>FE: {response, model, intent, insights}
+    else Operational Insights / Prompt Library
+        API->>OB: /odaos/chat/stream or /odaos/prompts/:id/execute
+        OB->>DATA: Live data fetches / tool queries
+        OB->>LLM: Orchestrator + agent execution
+        LLM-->>OB: token stream + final answer
+        OB-->>FE: SSE events token/chart/suggestions/usage/done
+        FE->>FE: Render AI Usage Summary
+    end
+
+    FE-->>U: Final answer with usage transparency
 ```
 
 ---
@@ -401,23 +390,35 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as Header ChatbotPanel
-    participant S as ChatbotService (/chatbot/chat/enhanced)
-    participant P as ODAOS Provider Factory
-    participant O as ODAOS Runtime (/odaos/*)
-    participant LLM as Active LLM Provider
-    
-    U->>C: Type message
-    C->>S: POST /api/v1/chatbot/chat/enhanced
-    S->>S: Intent + OCI context enrichment
-    S->>P: create_llm() (primary path)
-    P->>LLM: Send prompt
-    LLM-->>P: AI response
-    P-->>S: Parsed response
-    S-->>C: {response, model, intent, insights}
-    C-->>U: Display response
+    participant FE as Frontend (Header + OI)
+    participant API as FastAPI /api/v1
+    participant CS as ChatbotService
+    participant OB as ODAOS Bridge + Core
+    participant LLM as Active Provider
+    participant DATA as OCI + Oracle DB
 
-    Note over U,O: Operational Insights tab uses /api/v1/odaos/chat/stream and /api/v1/odaos/prompts/{id}/execute
+    U->>FE: Ask cloud operations question
+    FE->>API: Authenticated request
+
+    alt Header assistant
+        API->>CS: POST /chatbot/chat/enhanced
+        CS->>CS: Intent + OCI context enrichment
+        CS->>LLM: create_llm() primary path
+        opt Provider unavailable
+            CS->>CS: Fallback to genai_service
+        end
+        LLM-->>CS: Response
+        CS-->>FE: JSON {response, model, intent, insights}
+    else ODAOS AI assistance / prompt library
+        API->>OB: /odaos/chat/stream or /odaos/prompts/:id/execute
+        OB->>DATA: Live lookup/query execution
+        OB->>LLM: Agent/orchestrator inference
+        LLM-->>OB: Streamed tokens + final content
+        OB-->>FE: SSE token/chart/suggestions/usage/done
+        FE->>FE: Append AI Usage Summary
+    end
+
+    FE-->>U: Infra-aware answer + usage section
 ```
 
 ---
@@ -481,25 +482,28 @@ export const useHealthMatrix = (compartmentId: string) => {
 
 ### Service Dependencies
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        API Endpoints                            │
-│  (auth.py, cloud.py, intelligence.py, chatbot.py, etc.)        │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │
-┌───────────────────────────────▼─────────────────────────────────┐
-│                       Service Layer                             │
-│                                                                 │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
-│  │ OCIService   │◄───│IntelService  │    │ChatbotService│       │
-│  │ (singleton)  │    │              │────►│              │       │
-│  └──────┬───────┘    └──────────────┘    └──────┬───────┘       │
-│         │                                       │               │
-│  ┌──────▼───────┐    ┌──────────────┐    ┌──────▼───────┐       │
-│  │ CacheService │    │AuthService   │    │GenAIService  │       │
-│  │ (file cache) │    │              │    │              │       │
-│  └──────────────┘    └──────────────┘    └──────────────┘       │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    API[API Routers (/api/v1/*)] --> CHAT[chatbot endpoints]
+    API --> ODAOSR[odaos endpoints]
+    API --> CORE[cloud/intelligence/monitoring/cost/k8s/remediation]
+
+    CHAT --> CS[ChatbotService]
+    CS --> OCICTX[OCI context enrichment + cache]
+    CS --> PF[ODAOS provider factory create_llm]
+    CS --> GF[genai_service fallback]
+
+    ODAOSR --> BR[odaos_bridge]
+    BR --> OCHAT[odaos_core ChatService]
+    BR --> OPROMPT[PromptService]
+    BR --> OVIZ[VizService]
+    BR --> OSESSION[SessionService]
+    OCHAT --> ORCH[Orchestrator + agents]
+    ORCH --> DBTOOLS[Live DB/OCI tools]
+    ORCH --> OLLM[Configured LLM provider]
+
+    CORE --> OCISVC[cloud_service + intelligence_service]
+    OCISVC --> OCIAPI[OCI SDK APIs]
 ```
 
 ### Key Services
@@ -508,8 +512,10 @@ export const useHealthMatrix = (compartmentId: string) => {
 |---------|------|---------|
 | **OCIService** | `cloud_service.py` | OCI API integration, resource fetching |
 | **IntelligenceService** | `intelligence_service.py` | Health scoring, matrix generation |
-| **GenAIService** | `genai_service.py` | LLM integration via Groq |
-| **ChatbotService** | `chatbot_service.py` | Conversational AI logic |
+| **ChatbotService** | `chatbot_service.py` | Header assistant flow, intent recognition, OCI context enrichment |
+| **ODAOSBridge** | `odaos_bridge.py` | Bridges `/api/v1/odaos/*` routes to migrated `app.odaos_core` services |
+| **ODAOS ChatService** | `odaos_core/api/services/chat_service.py` | Streaming chat/prompt execution with usage metrics and visualization hooks |
+| **GenAIService** | `genai_service.py` | Legacy/fallback LLM path when ODAOS provider call is unavailable |
 | **MonitoringService** | `monitoring_service.py` | Metrics and alerts |
 | **CostAnalyzerService** | `cost_analyzer_service.py` | Cost analysis and forecasting |
 | **CacheService** | `cache_service.py` | File-based caching layer |

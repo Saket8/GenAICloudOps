@@ -8,100 +8,96 @@ The GenAI CloudOps Dashboard follows a modern microservices architecture designe
 
 ### High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Client Layer                                   │
-│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐  │
-│  │   Web Dashboard     │  │   Mobile Apps       │  │   CLI Tools         │  │
-│  │   (React + TS)      │  │   (Future)          │  │   (Future)          │  │
-│  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │ HTTPS/WSS
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           API Gateway Layer                                 │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                      Unified API Gateway                            │   │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │   │
-│  │  │    Auth     │ │ Rate Limit  │ │   Routing   │ │   Metrics   │   │   │
-│  │  │  Middleware │ │ Middleware  │ │  Middleware │ │ Middleware  │   │   │
-│  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Microservices Layer                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │   GenAI     │ │ Monitoring  │ │ Kubernetes  │ │   Notification      │   │
-│  │  Service    │ │   Service   │ │   Service   │ │     Service         │   │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘   │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │    Cost     │ │   Access    │ │ Remediation │ │     Chatbot         │   │
-│  │  Analyzer   │ │  Analyzer   │ │   Service   │ │     Service         │   │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘   │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │ Prometheus  │ │   Grafana   │ │ WebSocket   │ │     Vault           │   │
-│  │  Metrics    │ │ Integration │ │  Service    │ │    Service          │   │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           Data & Cache Layer                                │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │ PostgreSQL  │ │    Redis    │ │   SQLite    │ │    In-Memory        │   │
-│  │ (Production)│ │   (Cache)   │ │ (Default)   │ │     Cache           │   │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           External Services                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │     OCI     │ │   Groq AI   │ │ Kubernetes  │ │    Prometheus       │   │
-│  │  Resources  │ │     API     │ │   Cluster   │ │     & Grafana       │   │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘   │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
-│  │    SMTP     │ │    Slack    │ │  Terraform  │ │     OCI CLI         │   │
-│  │   Server    │ │    API      │ │   Provider  │ │     Commands        │   │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph CLIENT[Client Layer]
+        WEB[Web Dashboard (React + TypeScript)]
+        HEADER[Header AI Assistant]
+        OI[Operational Insights<br/>AI Assistance + Prompt Library]
+        WEB --> HEADER
+        WEB --> OI
+    end
+
+    CLIENT -->|HTTPS + SSE + WebSocket| GATEWAY[FastAPI API Gateway /api/v1]
+
+    subgraph API[Route Layer]
+        AUTH[/auth/* (JWT + RBAC)]
+        DOMAIN[/cloud, /intelligence, /monitoring,<br/>/cost, /k8s, /remediation]
+        CHAT[/chatbot/chat/enhanced]
+        ODAOS[/odaos/chat/stream + /odaos/prompts/*]
+    end
+
+    GATEWAY --> AUTH
+    GATEWAY --> DOMAIN
+    GATEWAY --> CHAT
+    GATEWAY --> ODAOS
+
+    subgraph RUNTIME[AI + Service Runtime]
+        CHATBOT[ChatbotService<br/>Intent + OCI context]
+        PROVIDER[ODAOS provider factory create_llm]
+        LEGACY[genai_service fallback]
+        BRIDGE[odaos_bridge adapters]
+        CORE[odaos_core services:<br/>ChatService, PromptService, VizService, SessionService]
+        ORCH[ODAOS orchestrator + domain agents]
+        CHATBOT --> PROVIDER
+        CHATBOT --> LEGACY
+        BRIDGE --> CORE --> ORCH
+    end
+
+    CHAT --> CHATBOT
+    ODAOS --> BRIDGE
+    ORCH --> LLM[Configured LLM provider<br/>Groq/OpenRouter/Ollama/Anthropic/Gemini]
+
+    subgraph DATA[Data + External Integrations]
+        OCI[OCI APIs (compute/network/db/monitoring/audit)]
+        BRM[Oracle BRM and DBA data sources]
+        STORE[Prompt store + conversation/session DB + cache]
+    end
+
+    DOMAIN --> OCI
+    CHATBOT --> OCI
+    ORCH --> BRM
+    CORE --> STORE
 ```
 
 ### Component Interaction Flow
 
 ```mermaid
-graph TD
-    A[Web Client] --> B[API Gateway]
-    B --> C{Authentication}
-    C -->|Valid| D[Route to Service]
-    C -->|Invalid| E[Return 401]
-    
-    D --> F[Monitoring Service]
-    D --> G[GenAI Service]
-    D --> H[Kubernetes Service]
-    D --> I[Cost Analyzer]
-    D --> J[Access Analyzer]
-    D --> K[Remediation Service]
-    
-    F --> L[OCI SDK]
-    G --> M[Groq API]
-    H --> N[Kubernetes API]
-    I --> O[OCI Cost API]
-    J --> P[OCI IAM API]
-    K --> Q[Command Execution]
-    
-    L --> R[OCI Resources]
-    M --> S[AI Models]
-    N --> T[K8s Clusters]
-    O --> U[Cost Data]
-    P --> V[IAM Policies]
-    Q --> W[Infrastructure]
-    
-    F --> X[Redis Cache]
-    G --> X
-    H --> X
-    I --> X
-    
-    B --> Y[WebSocket Service]
-    Y --> Z[Real-time Updates]
+sequenceDiagram
+    participant User as User
+    participant UI as Frontend UI
+    participant GW as FastAPI Gateway (/api/v1)
+    participant C as ChatbotService
+    participant B as ODAOS Bridge/Core
+    participant A as ODAOS Orchestrator/Agents
+    participant OCI as OCI APIs
+    participant DB as Oracle BRM/DB tools
+    participant LLM as Active LLM Provider
+
+    User->>UI: Submit question or execute prompt
+    UI->>GW: JWT-authenticated request
+    GW->>GW: Auth + permission checks
+
+    alt Header AI Assistant
+        GW->>C: POST /chatbot/chat/enhanced
+        C->>OCI: Fetch infra context (for infra intents)
+        C->>LLM: create_llm() primary call
+        opt Provider error
+            C->>C: Fallback to genai_service
+        end
+        LLM-->>C: AI response
+        C-->>UI: JSON response
+    else Operational Insights / Prompt Library
+        GW->>B: /odaos/chat/stream or /odaos/prompts/:id/execute
+        B->>A: Route to agent/orchestrator path
+        A->>DB: Live SQL/tool queries
+        A->>LLM: Generate analysis
+        LLM-->>A: Token stream + final output
+        A-->>B: chart/suggestions/usage payload
+        B-->>UI: SSE token/chart/suggestions/usage/done
+    end
+
+    UI-->>User: Answer + AI Usage Summary
 ```
 
 ## Core Components
@@ -311,23 +307,24 @@ cost:summary:{compartment_id} -> Cost summary (TTL: 1 hour)
 ```mermaid
 sequenceDiagram
     participant Client
-    participant Gateway
+    participant Gateway as FastAPI Gateway
     participant AuthService
-    participant Database
-    
-    Client->>Gateway: Login Request
-    Gateway->>AuthService: Validate Credentials
-    AuthService->>Database: Check User
-    Database-->>AuthService: User Data
-    AuthService-->>Gateway: JWT Token
-    Gateway-->>Client: Token Response
-    
-    Client->>Gateway: API Request + Token
-    Gateway->>AuthService: Validate Token
-    AuthService-->>Gateway: User Context
-    Gateway->>Service: Authorized Request
-    Service-->>Gateway: Response
-    Gateway-->>Client: Final Response
+    participant UserDB as User Database
+    participant Route as Protected API Route
+
+    Client->>Gateway: POST /api/v1/auth/login
+    Gateway->>AuthService: Validate credentials
+    AuthService->>UserDB: Check user + roles
+    UserDB-->>AuthService: User record
+    AuthService-->>Gateway: JWT + permission claims
+    Gateway-->>Client: Token response
+
+    Client->>Gateway: Request /api/v1/* + Bearer token
+    Gateway->>AuthService: Validate token + scope
+    AuthService-->>Gateway: User context
+    Gateway->>Route: Forward authorized request
+    Route-->>Gateway: Response payload (JSON or SSE)
+    Gateway-->>Client: Final response
 ```
 
 #### Authorization Model
