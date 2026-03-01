@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 import time
+from langchain_core.messages import HumanMessage
 
 from app.core.database import get_db
 from app.models.chatbot import (
@@ -14,7 +15,7 @@ from app.models.chatbot import (
     ConversationAnalytics, ChatbotFeedback, MessageRole, IntentType, ConversationStatus
 )
 from app.models.user import User
-from app.services.genai_service import genai_service, GenAIRequest, PromptType
+from app.services.genai_service import genai_service, GenAIResponse
 from app.schemas.chatbot import (
     IntentResponse, EnhancedChatResponse, ConversationResponse, 
     MessageResponse, TemplateResponse
@@ -195,6 +196,125 @@ class ChatbotService:
     def __init__(self):
         self.intent_service = IntentRecognitionService()
         self.default_templates = self._load_default_templates()
+
+    def _get_odaos_model_hint(self) -> str:
+        """Best-effort model label from ODAOS provider settings."""
+        try:
+            from app.odaos_core.core.providers import get_provider_info
+            info = get_provider_info()
+            return info.get("model") or "odaos-infra-context"
+        except Exception:
+            return "odaos-infra-context"
+
+    def _build_infra_fallback_response(
+        self,
+        message: str,
+        oci_context: Optional[Dict[str, Any]],
+    ) -> str:
+        """Generate infra-aware fallback text from live context when LLM call is unavailable."""
+        resources = (oci_context or {}).get("resources", {}) if isinstance(oci_context, dict) else {}
+        message_lower = message.lower()
+
+        if not resources:
+            return (
+                "I could not read live infrastructure inventory for this request.\n\n"
+                "Please confirm your compartment selection and ask again. "
+                "I can then list compute, database, network, storage, and alert details."
+            )
+
+        compute = resources.get("compute_instances", {})
+        databases = resources.get("databases", {})
+        networks = resources.get("networks", {})
+        storage = resources.get("storage", {})
+        alerts = resources.get("alerts", {})
+
+        if any(k in message_lower for k in ["compute", "instance", "vm", "server"]) and compute:
+            items = compute.get("items", []) or []
+            running = [i for i in items if str(i.get("state", "")).upper() == "RUNNING"]
+            if running:
+                names = ", ".join(i.get("name", "Unknown") for i in running[:8])
+                more = f" (+{len(running) - 8} more)" if len(running) > 8 else ""
+                return (
+                    f"I found {len(running)} running compute instance(s) in your selected scope.\n\n"
+                    f"Running now: {names}{more}\n\n"
+                    f"Total instances discovered: {compute.get('count', len(items))}."
+                )
+            return (
+                f"I found {compute.get('count', len(items))} compute instance(s), "
+                "but none are currently in RUNNING state."
+            )
+
+        snapshot_lines = []
+        if compute:
+            compute_summary = compute.get("summary") or f"{compute.get('count', 0)} instances"
+            snapshot_lines.append(f"- Compute: {compute_summary}")
+        if databases:
+            db_summary = databases.get("summary") or f"{databases.get('count', 0)} databases"
+            snapshot_lines.append(f"- Databases: {db_summary}")
+        if networks:
+            net_summary = networks.get("summary") or f"{networks.get('count', 0)} VCNs"
+            snapshot_lines.append(f"- Networks: {net_summary}")
+        if storage:
+            storage_summary = storage.get("summary") or (
+                f"{storage.get('buckets', 0)} buckets, {storage.get('block_volumes', 0)} block volumes"
+            )
+            snapshot_lines.append(
+                f"- Storage: {storage_summary}"
+            )
+        if alerts:
+            alerts_summary = alerts.get("summary") or f"{alerts.get('count', 0)} alerts"
+            snapshot_lines.append(f"- Alerts: {alerts_summary}")
+
+        return "Live infrastructure snapshot:\n" + "\n".join(snapshot_lines)
+
+    async def _generate_with_odaos_provider(self, prompt: str) -> GenAIResponse:
+        """Generate response using the same ODAOS provider stack used by Prompt Library."""
+        from app.odaos_core.core.providers import create_llm, get_provider_info
+
+        start_time = time.time()
+        llm = create_llm(temperature=0.2, max_tokens=4096)
+        response = await llm.ainvoke([HumanMessage(content=prompt)])
+
+        response_text = response.content if hasattr(response, "content") else str(response)
+        usage_metadata = getattr(response, "usage_metadata", {}) or {}
+        response_metadata = getattr(response, "response_metadata", {}) or {}
+        token_usage = response_metadata.get("token_usage", {}) if isinstance(response_metadata, dict) else {}
+
+        total_tokens = usage_metadata.get("total_tokens") or token_usage.get("total_tokens") or 0
+        provider_info = get_provider_info()
+        model_name = (
+            response_metadata.get("model_name")
+            if isinstance(response_metadata, dict)
+            else None
+        ) or provider_info.get("model") or "odaos-provider"
+
+        return GenAIResponse(
+            content=response_text,
+            model=model_name,
+            tokens_used=int(total_tokens),
+            response_time=time.time() - start_time,
+            cached=False,
+            request_id=f"odaos_{int(time.time() * 1000)}"
+        )
+
+    async def _generate_ai_response(
+        self,
+        enhanced_prompt: str,
+        session_id: str,
+        user_id: int,
+        context: Optional[Dict[str, Any]],
+    ) -> GenAIResponse:
+        """Primary path: ODAOS provider (same as Prompt Library). Fallback: legacy GenAI service."""
+        try:
+            return await self._generate_with_odaos_provider(enhanced_prompt)
+        except Exception as exc:
+            logger.warning("ODAOS provider unavailable for header assistant, using GenAI fallback: %s", exc)
+            return await genai_service.chat_completion(
+                message=enhanced_prompt,
+                session_id=session_id,
+                user_id=str(user_id),
+                context=context
+            )
     
     async def enhanced_chat(
         self,
@@ -248,38 +368,70 @@ class ChatbotService:
                 IntentType.TROUBLESHOOTING,
                 IntentType.REMEDIATION_REQUEST
             ]
-            
-            if oci_context is None:
-                # Check if we have cached context (useful for follow-up questions)
-                cached_context = _resource_cache.get("oci_resources_summary")
-                
-                if cached_context:
-                    # Use cached context for all queries (enables follow-up questions)
-                    oci_context = cached_context
-                    logger.info("Using cached OCI context for query")
-                elif should_fetch_fresh:
-                    # Fetch fresh data for infrastructure-related queries
+
+            compartment_hint = None
+            if isinstance(oci_context, dict):
+                compartment_hint = oci_context.get("compartment_id")
+
+            # For infra intents, always try to enrich context with live resources.
+            if should_fetch_fresh:
+                has_resource_payload = isinstance(oci_context, dict) and bool(oci_context.get("resources"))
+                if not has_resource_payload:
                     try:
-                        oci_context = await self._auto_fetch_resource_context(
-                            message, intent_response
+                        fetched_context = await self._auto_fetch_resource_context(
+                            message,
+                            intent_response,
+                            compartment_hint=compartment_hint
                         )
-                        logger.info(f"Auto-fetched OCI context for intent: {intent_response.intent_type.value}")
+                        if oci_context and isinstance(oci_context, dict):
+                            merged = dict(oci_context)
+                            merged_resources = fetched_context.get("resources", {})
+                            if merged_resources:
+                                merged["resources"] = merged_resources
+                            merged.setdefault("timestamp", fetched_context.get("timestamp"))
+                            oci_context = merged
+                        else:
+                            oci_context = fetched_context
+                        logger.info("Auto-fetched OCI context for intent: %s", intent_response.intent_type.value)
                     except Exception as e:
-                        logger.warning(f"Failed to auto-fetch OCI context: {e}")
-                        # Continue without context - graceful degradation
+                        logger.warning("Failed to auto-fetch OCI context: %s", e)
+            elif oci_context is None:
+                # Non-infra queries can still benefit from recent cached snapshot.
+                cached_context = _resource_cache.get("oci_resources_summary:default")
+                if cached_context:
+                    oci_context = cached_context
+                    logger.info("Using cached OCI context for follow-up query")
             
             # Enhanced prompt with OCI context
             enhanced_prompt = await self._build_enhanced_prompt(
                 message, conversation, oci_context, intent_response
             )
             
-            # Generate AI response
-            ai_response = await genai_service.chat_completion(
-                message=enhanced_prompt,
+            # Generate AI response with ODAOS provider first (same path/model family as Prompt Library)
+            ai_response = await self._generate_ai_response(
+                enhanced_prompt=enhanced_prompt,
                 session_id=session_id,
-                user_id=str(user_id),
-                context=context
+                user_id=user_id,
+                context=context,
             )
+
+            # Ensure header assistant stays infra-aware even if upstream model fails.
+            is_infra_intent = intent_response and intent_response.intent_type in [
+                IntentType.INFRASTRUCTURE_QUERY,
+                IntentType.RESOURCE_ANALYSIS,
+                IntentType.MONITORING_ALERT,
+                IntentType.TROUBLESHOOTING,
+                IntentType.REMEDIATION_REQUEST,
+            ]
+            if ai_response.model == "fallback-local" and is_infra_intent:
+                ai_response = GenAIResponse(
+                    content=self._build_infra_fallback_response(message, oci_context),
+                    model=self._get_odaos_model_hint(),
+                    tokens_used=0,
+                    response_time=ai_response.response_time,
+                    cached=False,
+                    request_id=f"infra_fallback_{int(time.time() * 1000)}"
+                )
             
             # Store user message
             user_message = ConversationMessage(
@@ -392,8 +544,8 @@ class ChatbotService:
         ]
         
         # Build appropriate system preamble based on query type
-        if is_infrastructure_query and oci_context and oci_context.get("resources"):
-            # INFRASTRUCTURE MODE: Use live OCI data
+        if is_infrastructure_query:
+            # INFRASTRUCTURE MODE: Always keep response infra-focused.
             enhanced_prompt = """You are an AI assistant for the GenAI CloudOps dashboard with LIVE ACCESS to the user's actual OCI (Oracle Cloud Infrastructure) resources.
 
 🔹 MODE: INFRASTRUCTURE QUERY
@@ -406,9 +558,23 @@ IMPORTANT INSTRUCTIONS:
 5. Be concise and factual based on the live data.
 
 """
-            enhanced_prompt += "=== LIVE OCI RESOURCE DATA ===\n"
-            enhanced_prompt += f"{json.dumps(oci_context, indent=2)}\n"
-            enhanced_prompt += "=== END LIVE DATA ===\n\n"
+            if oci_context and oci_context.get("resources"):
+                enhanced_prompt += "=== LIVE OCI RESOURCE DATA ===\n"
+                enhanced_prompt += f"{json.dumps(oci_context, indent=2)}\n"
+                enhanced_prompt += "=== END LIVE DATA ===\n\n"
+            elif oci_context:
+                enhanced_prompt += "=== SELECTED INFRASTRUCTURE CONTEXT ===\n"
+                enhanced_prompt += f"{json.dumps(oci_context, indent=2)}\n"
+                enhanced_prompt += "=== END SELECTED CONTEXT ===\n\n"
+                enhanced_prompt += (
+                    "If detailed resource inventory is missing, provide compartment-specific guidance "
+                    "and ask one precise follow-up needed to retrieve exact resources.\n\n"
+                )
+            else:
+                enhanced_prompt += (
+                    "Live resource payload is temporarily unavailable. "
+                    "Provide infra-specific guidance and ask one precise follow-up to continue.\n\n"
+                )
             
         else:
             # GENERAL CHAT MODE: Friendly conversation
@@ -465,7 +631,8 @@ Note: For specific infrastructure questions (like "show my instances"), suggest 
     async def _auto_fetch_resource_context(
         self,
         message: str,
-        intent: IntentResponse
+        intent: IntentResponse,
+        compartment_hint: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Automatically fetch OCI resource context based on query intent.
@@ -474,7 +641,7 @@ Note: For specific infrastructure questions (like "show my instances"), suggest 
         global _resource_cache
         
         # Check cache first
-        cache_key = "oci_resources_summary"
+        cache_key = f"oci_resources_summary:{compartment_hint or 'default'}"
         cached = _resource_cache.get(cache_key)
         if cached:
             logger.info("Using cached OCI resource context")
@@ -501,7 +668,9 @@ Note: For specific infrastructure questions (like "show my instances"), suggest 
                 return context
             
             # Use first compartment or tenancy root
-            compartment_id = oci_service.config.get('tenancy') if oci_service.config else compartments[0]['id']
+            compartment_id = compartment_hint or (
+                oci_service.config.get('tenancy') if oci_service.config else compartments[0]['id']
+            )
             logger.info(f"Fetching resources for context from compartment: {compartment_id[:20]}...")
             
             # Fetch all resources using the existing parallel method

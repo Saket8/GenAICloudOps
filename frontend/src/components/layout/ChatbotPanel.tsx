@@ -154,7 +154,20 @@ export function ChatbotPanel({ isOpen, onClose }: ChatbotPanelProps) {
         use_templates: true
       };
 
-      const ociContext = {};
+      const selectedCompartmentId =
+        localStorage.getItem('selectedCompartmentId') ||
+        localStorage.getItem('selectedCompartment');
+      const selectedCloudProvider =
+        localStorage.getItem('selectedCloudProvider') ||
+        localStorage.getItem('selectedProvider');
+      const ociContext: Record<string, any> = {};
+
+      if (selectedCompartmentId) {
+        ociContext.compartment_id = selectedCompartmentId;
+      }
+      if (selectedCloudProvider) {
+        ociContext.cloud_provider = selectedCloudProvider;
+      }
 
       if (Object.keys(ociContext).length > 0) {
         chatRequest.oci_context = ociContext;
@@ -294,6 +307,17 @@ export function ChatbotPanel({ isOpen, onClose }: ChatbotPanelProps) {
     { icon: 'fa-wrench', label: 'Troubleshoot', query: suggestedQueries.troubleshooting_queries[0] },
   ] : [];
 
+  const latestAssistantModel = [...messages]
+    .reverse()
+    .find((msg) => !msg.isUser && msg.model_used && msg.model_used !== 'system')
+    ?.model_used;
+  const compactModelName = latestAssistantModel?.split('/').pop() || latestAssistantModel;
+  const assistantHeaderSubtitle = isLoading
+    ? 'Thinking...'
+    : compactModelName
+      ? `Infra-aware • ${compactModelName}`
+      : 'Infra-aware CloudOps Helper';
+
   if (!isOpen) return null;
 
   return (
@@ -351,13 +375,9 @@ export function ChatbotPanel({ isOpen, onClose }: ChatbotPanelProps) {
                     AI Assistant
                   </h3>
                   <p className="text-white/70 text-xs font-medium">
-                    {isLoading ? (
-                      <span className="flex items-center">
-                        <span className="animate-pulse">Thinking...</span>
-                      </span>
-                    ) : (
-                      conversation?.title || 'CloudOps Helper'
-                    )}
+                    <span className="flex items-center">
+                      <span className={isLoading ? 'animate-pulse' : ''}>{assistantHeaderSubtitle}</span>
+                    </span>
                   </p>
                 </div>
               </div>
