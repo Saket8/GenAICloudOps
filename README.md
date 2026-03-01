@@ -5,170 +5,653 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
 [![React 18](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org/)
 [![OCI SDK](https://img.shields.io/badge/OCI_SDK-2.100+-orange.svg)](https://oracle-cloud-infrastructure-python-sdk.readthedocs.io/)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28+-blue.svg)](https://kubernetes.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
 **An intelligent, AI-powered cloud operations dashboard for Oracle Cloud Infrastructure (OCI) with advanced monitoring, automation, and conversational AI capabilities.**
 
+---
+
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [AI Model Runtime & Fine-Tuning](#-ai-model-runtime--fine-tuning-updated-march-2026)
+- [Architecture](#-architecture)
+- [Technology Stack](#-technology-stack)
+- [Project Structure](#-project-structure)
+- [Execution Flow](#-execution-flow)
+- [Frontend Layer](#-frontend-layer)
+- [Backend Layer](#-backend-layer)
+- [OCI API Integration](#-oci-api-integration)
+- [Security & Authentication](#-security--authentication)
+- [Quick Start](#-quick-start)
+- [Configuration](#-configuration)
+- [API Reference](#-api-reference)
+- [Deployment](#-deployment)
+- [Monitoring & Observability](#-monitoring--observability)
+
+---
+
 ## 🌟 Overview
 
-The GenAI CloudOps Dashboard is a comprehensive cloud operations management platform that combines the power of **Generative AI**, **real-time monitoring**, **automated remediation**, and **intelligent analytics** to provide unparalleled visibility and control over your OCI infrastructure.
+The GenAI CloudOps Dashboard is a comprehensive cloud operations management platform that combines **Generative AI**, **real-time monitoring**, **automated remediation**, and **intelligent analytics** to provide visibility and control over your OCI infrastructure.
 
-### 🎯 Key Value Propositions
+### 🎯 Key Features
 
-- **🤖 AI-Powered Operations**: Leverage advanced GenAI for intelligent insights, automated remediation recommendations, and conversational cloud management
-- **📊 Unified Monitoring**: Real-time visibility across OCI compute, databases, Kubernetes (OKE), networking, and storage resources
-- **🔧 Automated Remediation**: AI-assessed automated fixes for common issues with approval workflows and rollback capabilities
-- **💰 Cost Optimization**: Advanced cost analysis, forecasting, and optimization recommendations with GenAI insights
-- **🔐 Security Analysis**: Comprehensive RBAC and IAM policy analysis with AI-powered security recommendations
-- **💬 Conversational Interface**: Natural language interaction with your cloud infrastructure through an intelligent chatbot
-- **📈 Business Intelligence**: Advanced analytics and reporting with customizable dashboards and alerts
+| Feature | Description |
+|---------|-------------|
+| 🤖 **AI-Powered Operations** | GenAI chatbot for natural language cloud management |
+| 📊 **Cloud Intelligence Hub** | Health matrix, resource scoring, and actionable insights |
+| 🔧 **Auto-Remediation** | AI-assessed automated fixes with approval workflows |
+| 💰 **Cost Optimization** | Cost analysis, forecasting, and optimization recommendations |
+| 🔐 **Security Analysis** | RBAC analysis, IAM policy evaluation, and security scoring |
+| ☸️ **Kubernetes Management** | OKE cluster monitoring, pod health, and log analysis |
+| 📈 **Real-time Dashboards** | Live metrics, charts, and status indicators |
+
+---
+
+## 🧠 AI Model Runtime & Fine-Tuning (Updated: March 2026)
+
+This section reflects the current runtime behavior (not the older chatbot-only flow).
+
+### Model Execution Paths
+
+1. **Header AI Assistant (`/chatbot`)**
+- Frontend: `ChatbotPanel.tsx` sends `POST /api/v1/chatbot/chat/enhanced`
+- Backend: `chatbot_service.py`
+- Primary model path: **ODAOS provider factory** (`app.odaos_core.core.providers.create_llm`)
+- Fallback path: legacy `genai_service` if provider call fails
+- Infra context: selected compartment/provider from UI is passed via `oci_context`
+
+2. **Operational Insights AI Assistant + Prompt Library (`/operational-insights`)**
+- Chat stream: `GET /api/v1/odaos/chat/stream`
+- Prompt execution stream: `POST /api/v1/odaos/prompts/{prompt_id}/execute`
+- Backend services: `app/odaos_core/api/services/chat_service.py` + ODAOS orchestrator
+- These routes stream assistant output + usage telemetry
+
+### Supported Model Providers (ODAOS)
+
+Configured in `backend/app/odaos_core/core/config.py`:
+- `groq`
+- `openrouter`
+- `ollama`
+- `anthropic`
+- `gemini`
+
+Runtime selection is controlled by `ODAOS_LLM_PROVIDER` and provider-specific keys/models in `.env`.
+
+### Fine-Tuning Details
+
+There is **no custom weight fine-tuned model artifact** checked into this repository today.
+
+Current adaptation strategy is runtime/domain tuning via:
+- Intent recognition (infra/troubleshooting/cost/etc.)
+- Prompt templates and structured system guidance
+- Live OCI context enrichment (resources, alerts, compartment-aware context)
+- Conversation/session context
+- Prompt-library driven execution paths
+
+### AI Usage Transparency (Current Behavior)
+
+For ODAOS responses, the UI appends **AI Usage Summary** with:
+- Input Tokens
+- Output Tokens
+- Total Tokens
+- Estimated Energy Usage (Wh)
+- Estimated CO2 Emissions (g)
+- Response Time
+
+If any metric cannot be produced by runtime/provider, UI shows `Not Available`.
+
+---
 
 ## 🏗️ Architecture
 
+### High-Level System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FRONTEND (React + TypeScript)                     │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────┐ │
+│  │  Dashboard  │ │ Cloud Intel │ │  Monitoring │ │Cost Analyzer│ │Chatbot │ │
+│  │    Page     │ │    Hub      │ │    Page     │ │    Page     │ │ Panel  │ │
+│  └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └────┬───┘ │
+│         │               │               │               │              │     │
+│  ┌──────▼───────────────▼───────────────▼───────────────▼──────────────▼───┐ │
+│  │                      API Client (Axios + React Query)                   │ │
+│  │                      • JWT Authentication                               │ │
+│  │                      • Request Interceptors                             │ │
+│  │                      • Error Handling                                   │ │
+│  └─────────────────────────────┬───────────────────────────────────────────┘ │
+└────────────────────────────────┼────────────────────────────────────────────┘
+                                 │ HTTP REST / WebSocket
+┌────────────────────────────────▼────────────────────────────────────────────┐
+│                          BACKEND (FastAPI + Python)                         │
+│  ┌─────────────────────────────────────────────────────────────────────────┐ │
+│  │                           API Layer (/api/v1)                           │ │
+│  │  ┌────────┐ ┌──────────┐ ┌────────────┐ ┌───────────┐ ┌──────────────┐  │ │
+│  │  │  Auth  │ │  Cloud   │ │Intelligence│ │ Chatbot   │ │  Kubernetes  │  │ │
+│  │  │/auth/* │ │/cloud/*  │ │/intel/*    │ │/chatbot/* │ │/kubernetes/* │  │ │
+│  │  └────────┘ └──────────┘ └────────────┘ └───────────┘ └──────────────┘  │ │
+│  └─────────────────────────────┬───────────────────────────────────────────┘ │
+│  ┌─────────────────────────────▼───────────────────────────────────────────┐ │
+│  │                          Service Layer                                  │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │ │
+│  │  │ OCIService   │ │IntelService  │ │GenAIService  │ │MonitoringService │ │ │
+│  │  │cloud_service │ │intelligence  │ │genai_service │ │monitoring_service│ │ │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘ │ │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │ │
+│  │  │ChatbotService│ │CostAnalyzer  │ │K8sService    │ │CacheService      │ │ │
+│  │  │chatbot_svc   │ │cost_analyzer │ │kubernetes_svc│ │cache_service     │ │ │
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘ │ │
+│  └─────────────────────────────┬───────────────────────────────────────────┘ │
+└────────────────────────────────┼────────────────────────────────────────────┘
+                                 │ OCI SDK / Kubernetes Client
+┌────────────────────────────────▼────────────────────────────────────────────┐
+│                     ORACLE CLOUD INFRASTRUCTURE (OCI)                       │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
+│  │  Compute   │ │  Database  │ │    OKE     │ │   Audit    │ │ Monitoring │ │
+│  │ Instances  │ │  Services  │ │  Clusters  │ │    API     │ │    API     │ │
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ │
+│  │    IAM     │ │   Vault    │ │    VCN     │ │   Object   │ │    Load    │ │
+│  │  Policies  │ │  Secrets   │ │  Network   │ │  Storage   │ │  Balancer  │ │
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Request Lifecycle Flow
+
+```
+┌─────────┐    ┌──────────┐    ┌────────────┐    ┌────────────┐    ┌─────────┐
+│  User   │───▶│  React   │───▶│   Axios    │───▶│  FastAPI   │───▶│   OCI   │
+│ Action  │    │Component │    │API Client  │    │  Backend   │    │   SDK   │
+└─────────┘    └──────────┘    └────────────┘    └────────────┘    └─────────┘
+     │              │                │                 │                │
+     │              │                │                 │                │
+     │    ┌─────────▼────────┐       │                 │                │
+     │    │ React Query      │       │                 │                │
+     │    │ - Cache results  │       │                 │                │
+     │    │ - Refetch logic  │       │                 │                │
+     │    └─────────┬────────┘       │                 │                │
+     │              │                │                 │                │
+     │              │    ┌───────────▼────────────┐    │                │
+     │              │    │ JWT Token Injection    │    │                │
+     │              │    │ Authorization Header   │    │                │
+     │              │    └───────────┬────────────┘    │                │
+     │              │                │                 │                │
+     │              │                │    ┌────────────▼───────────┐    │
+     │              │                │    │ Authentication Check   │    │
+     │              │                │    │ - Verify JWT           │    │
+     │              │                │    │ - Extract user context │    │
+     │              │                │    └────────────┬───────────┘    │
+     │              │                │                 │                │
+     │              │                │    ┌────────────▼───────────┐    │
+     │              │                │    │ Service Layer          │    │
+     │              │                │    │ - Business logic       │    │
+     │              │                │    │ - Cache check          │    │
+     │              │                │    └────────────┬───────────┘    │
+     │              │                │                 │                │
+     │              │                │                 │    ┌───────────▼──────┐
+     │              │                │                 │    │ OCI API Calls    │
+     │              │                │                 │    │ - Compute        │
+     │              │                │                 │    │ - Database       │
+     │              │                │                 │    │ - Monitoring     │
+     │              │                │                 │    └───────────┬──────┘
+     │              │                │                 │                │
+     ◀──────────────┴────────────────┴─────────────────┴────────────────┘
+                              Response Flow
+```
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+| Technology | Purpose |
+|------------|---------|
+| **React 18** | UI Framework with hooks and functional components |
+| **TypeScript 5** | Type-safe JavaScript |
+| **Vite** | Build tool and dev server |
+| **React Query** | Server state management and caching |
+| **React Router v6** | Client-side routing |
+| **Axios** | HTTP client with interceptors |
+| **TailwindCSS** | Utility-first CSS framework |
+| **Recharts** | Chart components for data visualization |
+| **Font Awesome** | Icon library |
+
+### Backend
+| Technology | Purpose |
+|------------|---------|
+| **Python 3.11+** | Core language |
+| **FastAPI** | Async web framework with OpenAPI docs |
+| **SQLAlchemy** | ORM for database operations |
+| **SQLite/PostgreSQL** | Database (SQLite for dev, PostgreSQL for prod) |
+| **OCI Python SDK** | Oracle Cloud Infrastructure integration |
+| **Kubernetes Client** | K8s cluster management |
+| **Pydantic v2** | Data validation and serialization |
+| **JWT (PyJWT)** | Authentication tokens |
+| **LLM Provider Layer** | ODAOS provider factory (OpenRouter/Groq/Ollama/Anthropic/Gemini) + fallback GenAI service |
+
+### Infrastructure
+| Technology | Purpose |
+|------------|---------|
+| **Docker** | Containerization |
+| **Docker Compose** | Multi-container orchestration |
+| **Terraform** | Infrastructure as Code |
+| **Oracle Cloud Infrastructure** | Cloud platform |
+
+---
+
+## 📁 Project Structure
+
+```
+GenAICloudOps/
+├── backend/                    # Python FastAPI Backend
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── endpoints/     # API route handlers
+│   │   │   │   ├── auth.py              # Authentication endpoints
+│   │   │   │   ├── cloud.py             # Cloud resources API
+│   │   │   │   ├── intelligence.py      # Intelligence Hub API
+│   │   │   │   ├── chatbot.py           # AI Chatbot API
+│   │   │   │   ├── kubernetes.py        # K8s management API
+│   │   │   │   ├── monitoring.py        # Monitoring API
+│   │   │   │   ├── cost_analyzer.py     # Cost analysis API
+│   │   │   │   ├── access_analyzer.py   # Security analysis API
+│   │   │   │   ├── remediation.py       # Auto-remediation API
+│   │   │   │   ├── vault.py             # OCI Vault API
+│   │   │   │   └── websocket.py         # Real-time WebSocket
+│   │   │   └── router.py      # Main API router
+│   │   ├── core/              # Core configuration
+│   │   │   ├── config.py                # Application settings
+│   │   │   ├── security.py              # JWT & authentication
+│   │   │   ├── middleware.py            # Request middleware
+│   │   │   └── exceptions.py            # Custom exceptions
+│   │   ├── models/            # SQLAlchemy ORM models
+│   │   │   └── user.py                  # User data model
+│   │   ├── schemas/           # Pydantic schemas
+│   │   │   ├── auth.py                  # Auth request/response
+│   │   │   └── cloud.py                 # Cloud resource schemas
+│   │   └── services/          # Business logic layer
+│   │       ├── cloud_service.py         # OCI API integration
+│   │       ├── intelligence_service.py  # Health matrix & scoring
+│   │       ├── genai_service.py         # LLM integration
+│   │       ├── chatbot_service.py       # AI chatbot logic
+│   │       ├── monitoring_service.py    # Metrics collection
+│   │       ├── cost_analyzer_service.py # Cost analysis
+│   │       ├── kubernetes_service.py    # K8s operations
+│   │       ├── cache_service.py         # Caching layer
+│   │       └── auth_service.py          # User authentication
+│   ├── main.py                # Application entry point
+│   ├── requirements.txt       # Python dependencies
+│   └── .env                   # Environment configuration
+│
+├── frontend/                  # React TypeScript Frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── pages/         # Page components
+│   │   │   │   ├── DashboardPage.tsx          # Main dashboard
+│   │   │   │   ├── CloudResourcesPage.tsx     # Resource browser
+│   │   │   │   ├── IntelligenceHubPage.tsx    # Health matrix
+│   │   │   │   ├── MonitoringPage.tsx         # Real-time monitoring
+│   │   │   │   ├── CostAnalyzerPage.tsx       # Cost analysis
+│   │   │   │   ├── AccessAnalyzerPage.tsx     # Security analysis
+│   │   │   │   ├── PodHealthAnalyzerPage.tsx  # K8s pod health
+│   │   │   │   ├── RemediationPage.tsx        # Auto-remediation
+│   │   │   │   └── SettingsPage.tsx           # Configuration
+│   │   │   ├── layout/        # Layout components
+│   │   │   │   ├── Header.tsx           # Top navigation bar
+│   │   │   │   ├── Sidebar.tsx          # Left navigation
+│   │   │   │   └── ChatbotPanel.tsx     # AI chatbot panel
+│   │   │   └── ui/            # Reusable UI components
+│   │   ├── services/          # API service modules
+│   │   │   ├── apiClient.ts             # Axios instance
+│   │   │   ├── authService.ts           # Auth API calls
+│   │   │   ├── cloudService.ts          # Cloud resource API
+│   │   │   ├── intelligenceService.ts   # Intelligence API
+│   │   │   ├── chatbotService.ts        # Chatbot API
+│   │   │   └── kubernetesService.ts     # K8s API
+│   │   ├── contexts/          # React contexts
+│   │   │   ├── AuthContext.tsx          # Authentication state
+│   │   │   ├── NotificationContext.tsx  # Notifications
+│   │   │   └── ThemeContext.tsx         # Dark/light theme
+│   │   ├── types/             # TypeScript type definitions
+│   │   ├── App.tsx            # Main app component
+│   │   └── main.tsx           # Application entry
+│   ├── package.json           # Node dependencies
+│   └── vite.config.ts         # Vite configuration
+│
+├── docs/                      # Documentation
+├── deployment/                # Deployment configurations
+│   └── helm-chart/            # Kubernetes Helm charts
+├── infrastructure/            # Terraform IaC
+├── docker-compose.yml         # Development containers
+├── docker-compose.prod.yml    # Production containers
+└── README.md                  # This file
+```
+
+---
+
+## 🔄 Execution Flow
+
+### 1. Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant A as /api/v1/auth
+    participant DB as Database
+    
+    U->>F: Enter credentials
+    F->>A: POST /auth/login
+    A->>DB: Validate user
+    DB-->>A: User record
+    A->>A: Generate JWT
+    A-->>F: {access_token, user}
+    F->>F: Store token in localStorage
+    F-->>U: Redirect to Dashboard
+```
+
+### 2. Cloud Resources Flow
+
+```mermaid
+sequenceDiagram
+    participant F as Frontend
+    participant C as CloudService
+    participant O as OCIService
+    participant OCI as OCI API
+    
+    F->>C: GET /cloud/resources
+    C->>O: get_all_resources()
+    O->>O: Check cache
+    alt Cache Hit
+        O-->>C: Cached data
+    else Cache Miss
+        O->>OCI: List instances, DBs, etc.
+        OCI-->>O: Resource data
+        O->>O: Update cache
+        O-->>C: Fresh data
+    end
+    C-->>F: {resources, total, timestamp}
+```
+
+### 3. Intelligence Hub Flow
+
+```mermaid
+sequenceDiagram
+    participant F as Frontend
+    participant I as IntelligenceService
+    participant O as OCIService
+    participant A as AuditAPI
+    
+    F->>I: GET /intelligence/health-matrix
+    I->>O: get_all_resources()
+    O-->>I: Resources list
+    I->>I: Calculate health scores
+    I->>A: get_instance_lifecycle_events()
+    A-->>I: Start/stop events
+    I->>I: Enrich with stopped duration
+    I->>I: Generate top actions
+    I-->>F: {matrix, resources, actions}
+```
+
+### 4. AI Assistant Flow (Current)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Header ChatbotPanel
+    participant S as ChatbotService (/chatbot/chat/enhanced)
+    participant P as ODAOS Provider Factory
+    participant O as ODAOS Runtime (/odaos/*)
+    participant LLM as Active LLM Provider
+    
+    U->>C: Type message
+    C->>S: POST /api/v1/chatbot/chat/enhanced
+    S->>S: Intent + OCI context enrichment
+    S->>P: create_llm() (primary path)
+    P->>LLM: Send prompt
+    LLM-->>P: AI response
+    P-->>S: Parsed response
+    S-->>C: {response, model, intent, insights}
+    C-->>U: Display response
+
+    Note over U,O: Operational Insights tab uses /api/v1/odaos/chat/stream and /api/v1/odaos/prompts/{id}/execute
+```
+
+---
+
+## 💻 Frontend Layer
+
+### Component Hierarchy
+
+```
+App.tsx
+├── AuthContext (authentication state)
+├── ThemeContext (dark/light mode)
+├── NotificationContext (alerts/toasts)
+└── Router
+    ├── /login → LoginForm
+    ├── /dashboard → DashboardPage
+    │   ├── Header
+    │   ├── Sidebar
+    │   ├── StatCards
+    │   └── Charts
+    ├── /resources → CloudResourcesPage
+    │   └── ResourceGrid
+    ├── /intelligence → IntelligenceHubPage
+    │   ├── TopActionsPanel
+    │   ├── HealthMatrix
+    │   └── ResourceList
+    ├── /monitoring → MonitoringPage
+    │   └── MetricsCharts
+    ├── /cost → CostAnalyzerPage
+    │   └── CostBreakdown
+    └── /chatbot → ChatbotPanel
+        ├── MessageList
+        └── InputBox
+```
+
+### State Management
+
+| Context | Purpose | Key Data |
+|---------|---------|----------|
+| **AuthContext** | User authentication | `user`, `token`, `isAuthenticated` |
+| **ThemeContext** | UI theming | `theme`, `toggleTheme` |
+| **NotificationContext** | Alert management | `notifications`, `unreadCount` |
+
+### API Integration Pattern
+
+```typescript
+// services/intelligenceService.ts
+export const useHealthMatrix = (compartmentId: string) => {
+  return useQuery({
+    queryKey: ['health-matrix', compartmentId],
+    queryFn: () => getHealthMatrix(compartmentId),
+    staleTime: 5 * 60 * 1000,  // 5 minute cache
+    refetchOnWindowFocus: false
+  });
+};
+```
+
+---
+
+## 🐍 Backend Layer
+
+### Service Dependencies
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Frontend (React + TypeScript)               │
-│  ┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────┐ │
-│  │   Dashboard Pages   │ │   Real-time Charts  │ │   Chatbot   │ │
-│  │                     │ │                     │ │ Interface   │ │
-│  └─────────────────────┘ └─────────────────────┘ └─────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                               │ HTTP/WebSocket
-┌─────────────────────────────────────────────────────────────────┐
-│                  Backend (FastAPI + Python)                     │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
-│  │     API      │ │    GenAI     │ │ Notification │ │   Auto   │ │
-│  │   Gateway    │ │   Service    │ │   Service    │ │Remediation│ │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘ │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
-│  │ Monitoring   │ │ Kubernetes   │ │     Cost     │ │  Access  │ │
-│  │   Service    │ │   Service    │ │   Analyzer   │ │ Analyzer │ │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                               │ OCI SDK / Kubernetes Client
-┌─────────────────────────────────────────────────────────────────┐
-│                Oracle Cloud Infrastructure (OCI)                │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
-│  │   Compute    │ │   Database   │ │     OKE      │ │   Cost   │ │
-│  │  Instances   │ │   Services   │ │  Clusters    │ │   API    │ │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘ │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────┐ │
-│  │      IAM     │ │     Vault    │ │  Monitoring  │ │   VCN    │ │
-│  │  Policies    │ │   Service    │ │  & Logging   │ │   & LB   │ │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────┘ │
+│                        API Endpoints                            │
+│  (auth.py, cloud.py, intelligence.py, chatbot.py, etc.)        │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────────┐
+│                       Service Layer                             │
+│                                                                 │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │ OCIService   │◄───│IntelService  │    │ChatbotService│       │
+│  │ (singleton)  │    │              │────►│              │       │
+│  └──────┬───────┘    └──────────────┘    └──────┬───────┘       │
+│         │                                       │               │
+│  ┌──────▼───────┐    ┌──────────────┐    ┌──────▼───────┐       │
+│  │ CacheService │    │AuthService   │    │GenAIService  │       │
+│  │ (file cache) │    │              │    │              │       │
+│  └──────────────┘    └──────────────┘    └──────────────┘       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## ✨ Core Features
+### Key Services
 
-### 🤖 **GenAI-Powered Intelligence**
-- **Conversational AI Chatbot** with natural language processing
-- **AI-Driven Insights** for performance optimization and cost reduction
-- **Intelligent Remediation** with risk assessment and automation
-- **Prompt Engineering Framework** with A/B testing and quality metrics
-- **Multi-turn Conversations** with context awareness
+| Service | File | Purpose |
+|---------|------|---------|
+| **OCIService** | `cloud_service.py` | OCI API integration, resource fetching |
+| **IntelligenceService** | `intelligence_service.py` | Health scoring, matrix generation |
+| **GenAIService** | `genai_service.py` | LLM integration via Groq |
+| **ChatbotService** | `chatbot_service.py` | Conversational AI logic |
+| **MonitoringService** | `monitoring_service.py` | Metrics and alerts |
+| **CostAnalyzerService** | `cost_analyzer_service.py` | Cost analysis and forecasting |
+| **CacheService** | `cache_service.py` | File-based caching layer |
+| **AuthService** | `auth_service.py` | User authentication and JWT |
 
-### 📊 **Comprehensive Monitoring**
-- **Real-time Dashboards** with customizable widgets and alerts
-- **Multi-Resource Monitoring** across compute, database, network, and storage
-- **Performance Metrics** with trend analysis and anomaly detection
-- **Health Scoring** with predictive analytics
-- **Alert Management** with intelligent correlation and escalation
+### OCI API Clients (Lazy Initialized)
 
-### 🔧 **Automated Operations**
-- **Auto-Remediation Engine** with AI risk assessment
-- **Approval Workflows** with multi-level authorization
-- **Rollback Capabilities** for safe automation
-- **Command Execution** supporting OCI CLI, kubectl, Terraform, and scripts
-- **Dry-Run Mode** for testing and validation
+```python
+# cloud_service.py
+client_factories = {
+    'compute': lambda: oci.core.ComputeClient(self.config),
+    'identity': lambda: oci.identity.IdentityClient(self.config),
+    'monitoring': lambda: oci.monitoring.MonitoringClient(self.config),
+    'database': lambda: oci.database.DatabaseClient(self.config),
+    'container_engine': lambda: oci.container_engine.ContainerEngineClient(self.config),
+    'load_balancer': lambda: oci.load_balancer.LoadBalancerClient(self.config),
+    'audit': lambda: oci.audit.AuditClient(self.config),
+    'usage_api': lambda: oci.usage_api.UsageapiClient(self.config),
+    # ... more clients
+}
+```
 
-### 💰 **Cost Intelligence**
-- **Advanced Cost Analysis** with granular breakdown by service and compartment
-- **Cost Forecasting** using machine learning algorithms
-- **Optimization Recommendations** with potential savings identification
-- **Budget Monitoring** with intelligent alerting
-- **Resource Right-sizing** suggestions
+---
 
-### 🔐 **Security & Access Analysis**
-- **RBAC Analysis** for Kubernetes clusters with security recommendations
-- **IAM Policy Evaluation** with risk assessment
-- **Access Pattern Analysis** with anomaly detection
-- **Compliance Monitoring** with automated reporting
-- **Security Recommendations** powered by AI
+## ☁️ OCI API Integration
 
-### 🎯 **Kubernetes Operations**
-- **Pod Health Monitoring** with real-time status tracking
-- **Log Analysis** with intelligent parsing and correlation
-- **Resource Usage Tracking** with capacity planning
-- **RBAC Management** with security best practices
-- **Troubleshooting Automation** with guided remediation
+### Resources Collected
 
-### 🔔 **Intelligent Notifications**
-- **Multi-Channel Alerts** via email, Slack, and webhooks
-- **Escalation Policies** with customizable rules
-- **Template Engine** with rich formatting
-- **Notification History** with analytics and reporting
-- **Smart Filtering** to reduce alert fatigue
+| Resource Type | OCI Service | Methods Used |
+|--------------|-------------|--------------|
+| **Compute Instances** | ComputeClient | `list_instances`, `get_instance` |
+| **Databases** | DatabaseClient | `list_autonomous_databases`, `list_db_systems` |
+| **OKE Clusters** | ContainerEngineClient | `list_clusters`, `list_node_pools` |
+| **Load Balancers** | LoadBalancerClient | `list_load_balancers` |
+| **Block Volumes** | BlockstorageClient | `list_volumes` |
+| **VCNs & Subnets** | VirtualNetworkClient | `list_vcns`, `list_subnets` |
+| **Audit Events** | AuditClient | `list_events` |
+| **Compartments** | IdentityClient | `list_compartments` |
 
-### 📈 **Advanced Analytics**
-- **Business Intelligence Dashboards** with KPI tracking
-- **Trend Analysis** with predictive modeling
-- **Custom Metrics** with flexible data visualization
-- **Performance Baselines** with deviation alerts
-- **Capacity Planning** with growth projections
+### Health Scoring Algorithm
+
+```python
+# intelligence_service.py
+SCORING_RULES = {
+    'state_stopped': -2,      # Stopped resource
+    'state_terminated': -5,   # Terminated resource
+    'state_error': -4,        # Error state
+    'inactive_30_days': -1,   # Inactive 30+ days
+    'inactive_90_days': -3,   # Inactive 90+ days
+    'no_backup_policy': -2,   # Missing backups
+    'low_cpu_utilization': -1 # < 5% CPU for 7 days
+}
+BASE_SCORE = 10  # All resources start at 10
+```
+
+---
+
+## 🔐 Security & Authentication
+
+### JWT Authentication Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Authentication Flow                          │
+│                                                                 │
+│  1. User submits credentials                                   │
+│     POST /api/v1/auth/login {username, password}               │
+│                                                                 │
+│  2. Backend validates & generates JWT                          │
+│     • Verify password hash (bcrypt)                            │
+│     • Create access_token (15 min expiry)                      │
+│     • Create refresh_token (7 day expiry)                      │
+│                                                                 │
+│  3. Frontend stores token                                      │
+│     localStorage.setItem('access_token', token)                │
+│                                                                 │
+│  4. Subsequent requests include token                          │
+│     Authorization: Bearer <access_token>                       │
+│                                                                 │
+│  5. Backend validates on each request                          │
+│     • Verify JWT signature                                     │
+│     • Check expiration                                         │
+│     • Extract user from token                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Security Features
+
+- **Password Hashing**: bcrypt with salt
+- **JWT Tokens**: RS256 signed, configurable expiry
+- **CORS**: Configured for frontend origin
+- **Rate Limiting**: Request throttling middleware
+- **Input Validation**: Pydantic schema validation
+- **SQL Injection Protection**: SQLAlchemy ORM
+
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - **Python 3.11+** with pip
-- **Node.js 18+** with npm/yarn
-- **Docker & Docker Compose** (optional, for containerized deployment)
-- **OCI Account** with appropriate permissions
-- **Kubernetes Cluster** (OKE recommended)
+- **Node.js 18+** with npm
+- **OCI Account** with configured credentials
+- **Docker** (optional, for containerized deployment)
 
-### 1. Clone the Repository
+### 1. Clone Repository
 
 ```bash
-git clone https://github.com/souravb-dev/GenAIOps.git
-cd GenAI-CloudOps
+git clone https://github.com/Saket8/GenAICloudOps.git
+cd GenAICloudOps
 ```
 
 ### 2. Backend Setup
 
 ```bash
-# Navigate to backend directory
 cd backend
 
 # Create virtual environment
 python -m venv venv
-
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy and configure environment
+# Configure environment
 cp .env.example .env
-# Edit .env with your OCI credentials and configuration
+# Edit .env with your OCI credentials
 
 # Initialize database
 python init_db.py
 
-# Start the backend server
+# Start server
 python main.py
 ```
 
-The backend API will be available at `http://localhost:8000`
+Backend runs at: `http://localhost:8000`
 
 ### 3. Frontend Setup
 
 ```bash
-# Navigate to frontend directory
 cd frontend
 
 # Install dependencies
@@ -178,25 +661,23 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000`
+Frontend runs at: `http://localhost:3000`
 
-### 4. Docker Deployment (Optional)
+### 4. Default Login
 
-```bash
-# Development environment
-docker-compose up -d
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `admin123` | Administrator |
 
-# Production environment
-docker-compose -f docker-compose.prod.yml up -d
-```
+---
 
-## 📋 Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
-Create a `.env` file in the backend directory with the following configuration:
-
 ```bash
+# backend/.env
+
 # Core Settings
 ENVIRONMENT=development
 SECRET_KEY=your-secret-key-here
@@ -206,328 +687,169 @@ DATABASE_URL=sqlite:///./genai_cloudops.db
 OCI_CONFIG_FILE=~/.oci/config
 OCI_PROFILE=DEFAULT
 OCI_REGION=us-ashburn-1
-OCI_TENANCY_ID=your-tenancy-id
-OCI_COMPARTMENT_ID=your-compartment-id
+OCI_TENANCY_ID=ocid1.tenancy.oc1..xxx
+OCI_COMPARTMENT_ID=ocid1.compartment.oc1..xxx
 
-# GenAI Configuration
-GROQ_API_KEY=your-groq-api-key
+# GenAI (legacy fallback service)
+GROQ_API_KEY=gsk_xxx
 GROQ_MODEL=llama3-8b-8192
 
-# Optional Enhancement Features
-PROMETHEUS_ENABLED=true
-GRAFANA_ENABLED=false
+# ODAOS Provider Selection (primary model path)
+ODAOS_LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-xxx
+OPENROUTER_MODEL=deepseek/deepseek-chat
+
+# Optional alternative providers
+# ODAOS_LLM_PROVIDER=groq
+# GROQ_MODEL=llama-3.3-70b-versatile
+# ODAOS_LLM_PROVIDER=ollama
+# OLLAMA_BASE_URL=http://localhost:11434
+# OLLAMA_MODEL=qwen3-coder
+# ODAOS_LLM_PROVIDER=anthropic
+# ANTHROPIC_API_KEY=sk-ant-xxx
+# ANTHROPIC_MODEL=claude-sonnet-4-20250514
+# ODAOS_LLM_PROVIDER=gemini
+# GOOGLE_API_KEY=xxx
+# GEMINI_MODEL=gemini-2.0-flash
+
+# Optional Features
+USE_DUMMY_OCI=false
+PROMETHEUS_ENABLED=false
 NOTIFICATIONS_ENABLED=true
-AUTO_REMEDIATION_ENABLED=false
-
-# Email Notifications (Optional)
-EMAIL_ENABLED=false
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@domain.com
-SMTP_PASSWORD=your-app-password
-
-# Slack Notifications (Optional)
-SLACK_ENABLED=false
-SLACK_BOT_TOKEN=xoxb-your-bot-token
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/your/webhook/url
 ```
 
-### OCI Setup
+### OCI Authentication
 
-1. **Install OCI CLI**: Follow the [OCI CLI installation guide](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)
-2. **Configure Authentication**: Run `oci setup config` to set up your credentials
-3. **Set Permissions**: Ensure your user/instance has appropriate IAM policies for resource access
+Ensure `~/.oci/config` is configured:
 
-### Kubernetes Setup
-
-1. **Configure kubectl**: Ensure kubectl is configured to access your OKE cluster
-2. **Create Service Account**: Apply RBAC configuration for monitoring access
-3. **Verify Access**: Test cluster connectivity with the application
-
-## 📖 Documentation
-
-### 📚 Complete Documentation Library
-
-- **[🏗️ Architecture Guide](docs/ARCHITECTURE.md)** - Detailed system architecture and design principles
-- **[⚙️ Installation Guide](docs/INSTALLATION.md)** - Step-by-step setup instructions for all environments
-- **[🔧 Configuration Reference](docs/CONFIGURATION.md)** - Complete configuration options and environment variables
-- **[🚀 Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment strategies and best practices
-- **[📡 API Reference](docs/API.md)** - Complete REST API documentation with examples
-- **[👤 User Guide](docs/USER_GUIDE.md)** - End-user documentation for all features
-- **[🔒 Security Guide](docs/SECURITY.md)** - Security configuration and best practices
-- **[🐛 Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[🤝 Contributing](docs/CONTRIBUTING.md)** - Developer guidelines and contribution process
-- **[⚡ Performance Tuning](docs/PERFORMANCE.md)** - Optimization and performance tuning guide
-- **[Task Delivery Dashboard (HTML)](docs/task-dashboard.html)**
-
-### 🎯 Module-Specific Guides
-
-- **[🤖 GenAI Service Guide](docs/modules/GENAI.md)** - AI features and prompt engineering
-- **[📊 Monitoring Guide](docs/modules/MONITORING.md)** - Metrics and alerting configuration
-- **[🔧 Auto-Remediation Guide](docs/modules/REMEDIATION.md)** - Automated operations and approval workflows
-- **[💰 Cost Analysis Guide](docs/modules/COST_ANALYSIS.md)** - Cost optimization and forecasting
-- **[🔐 Access Analyzer Guide](docs/modules/ACCESS_ANALYZER.md)** - Security and RBAC analysis
-- **[☸️ Kubernetes Guide](docs/modules/KUBERNETES.md)** - OKE integration and management
-- **[💬 Chatbot Guide](docs/modules/CHATBOT.md)** - Conversational AI features
-
-## 🔧 Development
-
-### Development Setup
-
-```bash
-# Backend development
-cd backend
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # Development dependencies
-
-# Frontend development
-cd frontend
-npm install
-npm run dev
+```ini
+[DEFAULT]
+user=ocid1.user.oc1..xxx
+fingerprint=xx:xx:xx:xx:xx
+key_file=~/.oci/oci_api_key.pem
+tenancy=ocid1.tenancy.oc1..xxx
+region=us-ashburn-1
 ```
 
-### Running Tests
+---
+
+## 📡 API Reference
+
+### Core Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/login` | User authentication |
+| `GET` | `/api/v1/cloud/resources` | List all OCI resources |
+| `GET` | `/api/v1/cloud/compartments` | List compartments |
+| `GET` | `/api/v1/intelligence/health-matrix` | Get health matrix |
+| `GET` | `/api/v1/intelligence/top-actions` | Get recommended actions |
+| `POST` | `/api/v1/chatbot/chat/enhanced` | Header AI assistant request |
+| `GET` | `/api/v1/chatbot/suggestions` | Header assistant quick suggestions |
+| `GET` | `/api/v1/odaos/chat/stream` | ODAOS AI Assistant SSE stream |
+| `POST` | `/api/v1/odaos/prompts/{prompt_id}/execute` | Prompt Library execution SSE stream |
+| `GET` | `/api/v1/odaos/prompts` | Prompt Library catalog |
+| `GET` | `/api/v1/kubernetes/pods` | List K8s pods |
+| `GET` | `/api/v1/cost/analysis` | Cost breakdown |
+
+### API Documentation
+
+Interactive docs available at:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+---
+
+## 🐳 Deployment
+
+### Docker Compose (Development)
 
 ```bash
-# Backend tests
-cd backend
-pytest
-
-# Frontend tests
-cd frontend
-npm test
-
-# End-to-end tests
-npm run test:e2e
-```
-
-### Code Quality
-
-```bash
-# Python linting and formatting
-cd backend
-black .
-flake8 .
-mypy .
-
-# TypeScript/React linting
-cd frontend
-npm run lint
-npm run type-check
-```
-
-## 🐳 Container Deployment
-
-### Development Environment
-
-```bash
-# Start all services
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 
-# Stop services
+# Stop
 docker-compose down
 ```
 
-### Production Environment
+### Docker Compose (Production)
 
 ```bash
-# Production deployment
 docker-compose -f docker-compose.prod.yml up -d
-
-# Scale services
-docker-compose -f docker-compose.prod.yml up -d --scale backend=3
 ```
 
-### Kubernetes Deployment
+### Kubernetes (Helm)
 
 ```bash
-# Deploy to Kubernetes
 cd deployment/helm-chart
 helm install genai-cloudops . -f values-prod.yaml
-
-# Upgrade deployment
-helm upgrade genai-cloudops . -f values-prod.yaml
-
-# Monitor deployment
-kubectl get pods -l app=genai-cloudops
 ```
-
-## 📊 Monitoring & Observability
-
-### Prometheus Metrics
-
-The application exposes comprehensive metrics at `/api/v1/enhancements/metrics`:
-
-- **System Metrics**: CPU, memory, disk usage
-- **Application Metrics**: HTTP requests, response times, error rates
-- **GenAI Metrics**: Token usage, quality scores, A/B testing results
-- **OCI Metrics**: API calls, resource health, cost tracking
-- **Business Metrics**: User activity, feature usage, remediation success
-
-### Grafana Dashboards
-
-Pre-built dashboards available:
-
-- **Application Overview**: System health and performance
-- **GenAI Service Metrics**: AI service analytics
-- **OCI Resources**: Cloud infrastructure monitoring
-- **Kubernetes/OKE**: Container orchestration metrics
-- **Business Intelligence**: User activity and KPIs
-
-### Health Checks
-
-- **Application Health**: `GET /api/v1/health`
-- **Database Health**: `GET /api/v1/health/database`
-- **External Services**: `GET /api/v1/health/external`
-- **Kubernetes Health**: `GET /api/v1/health/kubernetes`
-
-## 🔒 Security
-
-### Authentication & Authorization
-
-- **JWT-based authentication** with refresh tokens
-- **Role-based access control (RBAC)** with granular permissions
-- **Multi-factor authentication** support (future enhancement)
-- **Session management** with configurable timeouts
-
-### Data Protection
-
-- **Encryption at rest** for sensitive configuration data
-- **TLS/SSL encryption** for all communications
-- **Secrets management** via OCI Vault integration
-- **Audit logging** for all administrative actions
-
-### Security Best Practices
-
-- **Input validation** and sanitization
-- **SQL injection protection** via ORM
-- **XSS prevention** with content security policies
-- **Rate limiting** to prevent abuse
-- **Security headers** for web application protection
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](docs/CONTRIBUTING.md) for details.
-
-### Development Process
-
-1. **Fork the repository** and create a feature branch
-2. **Make your changes** following our coding standards
-3. **Add tests** for new functionality
-4. **Update documentation** as needed
-5. **Submit a pull request** with a clear description
-
-### Code of Conduct
-
-Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
-
-## 📈 Performance
-
-### Benchmarks
-
-- **API Response Time**: < 200ms for 95% of requests
-- **Dashboard Load Time**: < 2s for initial page load
-- **Real-time Updates**: < 1s latency via WebSocket
-- **GenAI Response Time**: 2-10s depending on complexity
-- **Resource Usage**: < 2GB RAM, < 1 CPU core per instance
-
-### Scaling
-
-- **Horizontal Scaling**: Support for multiple backend instances
-- **Database Scaling**: PostgreSQL with read replicas
-- **Caching**: Redis for improved performance
-- **Load Balancing**: HAProxy/Nginx configuration included
-
-## 🗺️ Roadmap
-
-### Current Version: 1.0.0
-- ✅ Core monitoring and alerting
-- ✅ GenAI integration with conversational interface
-- ✅ Auto-remediation with approval workflows
-- ✅ Cost analysis and optimization
-- ✅ Security and access analysis
-- ✅ Optional enhancements (Prometheus, Grafana, notifications)
-
-### Version 1.1.0 (Q2 2025)
-- 🔮 **Multi-Cloud Support**: AWS and Azure integration
-- 🔮 **Advanced ML Models**: Predictive analytics and anomaly detection
-- 🔮 **Mobile Application**: iOS and Android apps
-- 🔮 **Advanced Automation**: Workflow orchestration and complex scenarios
-
-### Version 1.2.0 (Q3 2025)
-- 🔮 **AI Assistants**: Specialized AI agents for different domains
-- 🔮 **Integration Marketplace**: Third-party plugin ecosystem
-- 🔮 **Advanced Security**: Zero-trust security model
-- 🔮 **Edge Computing**: Support for edge deployments
-
-## 📊 Project Status
-
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/souravb-dev/GenAIOps)
-[![Test Coverage](https://img.shields.io/badge/coverage-85%25-green)](https://github.com/souravb-dev/GenAIOps)
-[![Documentation](https://img.shields.io/badge/documentation-complete-blue)](https://github.com/souravb-dev/GenAIOps)
-
-**🎉 Current Progress**: 💯 **100% COMPLETE** (30/30 tasks finished) 🎉
-
-- ✅ **Core Platform**: 100% Complete
-- ✅ **GenAI Integration**: 100% Complete  
-- ✅ **Monitoring & Alerting**: 100% Complete
-- ✅ **Auto-Remediation**: 100% Complete
-- ✅ **Cost Analysis**: 100% Complete
-- ✅ **Security Analysis**: 100% Complete
-- ✅ **Optional Enhancements**: 100% Complete
-- ✅ **Final Documentation**: 100% Complete
-- ✅ **Performance Optimization & Security Hardening**: 100% Complete
-
-### 🏆 **PROJECT COMPLETED - PRODUCTION READY!** 
-
-The GenAI CloudOps Dashboard is now **production-ready** with comprehensive performance optimization, advanced security hardening, and enterprise-grade monitoring capabilities.
-
-## 🆘 Support
-
-### Getting Help
-
-- **📖 Documentation**: Check our comprehensive [docs](docs/) first
-- **🐛 Issues**: Report bugs via [GitHub Issues](https://github.com/souravb-dev/GenAIOps/issues)
-- **💬 Discussions**: Join [GitHub Discussions](https://github.com/souravb-dev/GenAIOps/discussions)
-- **📧 Email**: Contact the team at support@genai-cloudops.com
-
-### Community
-
-- **⭐ Star the project** if you find it useful
-- **🔗 Share** with your network and colleagues
-- **🤝 Contribute** code, documentation, or feedback
-- **📣 Follow** for updates and announcements
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Oracle Cloud Infrastructure** for the robust cloud platform
-- **OpenAI/Groq** for the powerful language models
-- **FastAPI** for the excellent Python web framework
-- **React** for the frontend framework
-- **Kubernetes** for container orchestration
-- **Prometheus & Grafana** for monitoring and visualization
 
 ---
 
-## 🌟 Star History
+## 📊 Monitoring & Observability
 
-[![Star History Chart](https://api.star-history.com/svg?repos=souravb-dev/GenAIOps&type=Date)](https://star-history.com/#souravb-dev/GenAIOps&Date)
+### Health Check Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/health` | Application health |
+| `GET /api/v1/health/database` | Database connectivity |
+
+### Application Metrics
+
+- **Request latency**: p50, p95, p99
+- **Error rates**: By endpoint and status code
+- **Cache hit rates**: OCI data cache performance
+- **GenAI metrics**: Token usage and response times
+
+### Logging
+
+Logs output to stdout in JSON format:
+```json
+{
+  "timestamp": "2024-12-15T10:00:00Z",
+  "level": "INFO",
+  "service": "intelligence_service",
+  "message": "Health matrix computed",
+  "resources": 40,
+  "healthy": 32
+}
+```
+
+---
+
+## 🗺️ Roadmap
+
+### Current: v1.0.0 ✅
+- Core monitoring and alerting
+- GenAI chatbot integration
+- Cloud Intelligence Hub
+- Cost analysis and optimization
+
+### Planned: v1.1.0
+- 🔮 Multi-cloud support (AWS, Azure)
+- 🔮 Advanced ML anomaly detection
+- 🔮 Mobile application
+
+---
+
+## 🆘 Support
+
+- **📖 Documentation**: [docs/](docs/)
+- **🐛 Issues**: [GitHub Issues](https://github.com/your-org/GenAICloudOps/issues)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/your-org/GenAICloudOps/discussions)
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
 **Made with ❤️ by the GenAI CloudOps Team**
 
-*Empowering cloud operations with artificial intelligence* 
-
-## Live OCI/Kubernetes Integration
-
-By default, the backend runs in dummy mode (no live OCI or Kubernetes calls). To enable real connections and provide credentials, see `docs/LIVE_OCI_INTEGRATION.md`. 
+*Empowering cloud operations with artificial intelligence*
