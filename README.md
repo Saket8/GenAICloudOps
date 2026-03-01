@@ -110,25 +110,25 @@ If any metric cannot be produced by runtime/provider, UI shows `Not Available`.
 
 ```mermaid
 flowchart TB
-    subgraph FE[Frontend (React + TypeScript)]
-        DASH[Dashboard + Operations Modules]
-        HEADER[Header AI Assistant<br/>ChatbotPanel]
-        OI[Operational Insights<br/>AI Assistance + Prompt Library]
-        API[API Clients<br/>Axios + fetch SSE + React Query]
+    subgraph FE
+        DASH[Dashboard modules]
+        HEADER[Header AI Assistant]
+        OI[Operational Insights]
+        API[Frontend API clients]
         DASH --> API
         HEADER --> API
         OI --> API
     end
 
-    API -->|REST + SSE + WS| GATE[FastAPI API Gateway<br/>api-v1 routes]
+    API -->|REST SSE WS| GATE[FastAPI API gateway]
 
-    subgraph BE[Backend Runtime]
-        AUTH[Auth + RBAC<br/>auth routes]
-        DOMAIN[Cloud + Intelligence + Monitoring<br/>Cost + K8s + Remediation]
-        HCHAT[Header Assistant Path<br/>chatbot chat enhanced]
-        OROUTES[ODAOS Path<br/>chat stream and prompt execute]
-        BRIDGE[odaos_bridge + odaos_core services]
-        PRIMARY[create_llm provider factory]
+    subgraph BE
+        AUTH[Auth and RBAC routes]
+        DOMAIN[Core domain routes]
+        HCHAT[Header assistant route]
+        OROUTES[ODAOS routes]
+        BRIDGE[ODAOS bridge services]
+        PRIMARY[Provider factory create llm]
         FALLBACK[genai_service fallback]
     end
 
@@ -140,11 +140,11 @@ flowchart TB
     HCHAT --> FALLBACK
     OROUTES --> BRIDGE
 
-    subgraph EXT[Data + External Systems]
+    subgraph EXT
         OCI[OCI APIs]
-        BRMDB[Oracle BRM / DBA data sources]
-        LLM[LLM Providers<br/>Groq/OpenRouter/Ollama/Anthropic/Gemini]
-        STORE[Prompt store + app DB + cache]
+        BRMDB[Oracle data sources]
+        LLM[LLM providers]
+        STORE[Prompt store and app cache]
     end
 
     DOMAIN --> OCI
