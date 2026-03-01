@@ -18,13 +18,13 @@ flowchart TB
         WEB --> OI
     end
 
-    CLIENT -->|HTTPS + SSE + WebSocket| GATEWAY[FastAPI API Gateway /api/v1]
+    CLIENT -->|HTTPS + SSE + WebSocket| GATEWAY[FastAPI API Gateway api-v1]
 
     subgraph API[Route Layer]
-        AUTH[/auth/* (JWT + RBAC)]
-        DOMAIN[/cloud, /intelligence, /monitoring,<br/>/cost, /k8s, /remediation]
-        CHAT[/chatbot/chat/enhanced]
-        ODAOS[/odaos/chat/stream + /odaos/prompts/*]
+        AUTH[auth routes with JWT + RBAC]
+        DOMAIN[cloud intelligence monitoring<br/>cost k8s remediation routes]
+        CHAT[chatbot chat enhanced route]
+        ODAOS[odaos chat stream and prompt routes]
     end
 
     GATEWAY --> AUTH
@@ -46,7 +46,7 @@ flowchart TB
 
     CHAT --> CHATBOT
     ODAOS --> BRIDGE
-    ORCH --> LLM[Configured LLM provider<br/>Groq/OpenRouter/Ollama/Anthropic/Gemini]
+    ORCH --> LLM[Configured LLM provider<br/>Groq OpenRouter Ollama Anthropic Gemini]
 
     subgraph DATA[Data + External Integrations]
         OCI[OCI APIs (compute/network/db/monitoring/audit)]

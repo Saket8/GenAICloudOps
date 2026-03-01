@@ -120,13 +120,13 @@ flowchart TB
         OI --> API
     end
 
-    API -->|REST + SSE + WS| GATE[/FastAPI API Gateway<br/>/api/v1/*/]
+    API -->|REST + SSE + WS| GATE[FastAPI API Gateway<br/>api-v1 routes]
 
     subgraph BE[Backend Runtime]
-        AUTH[Auth + RBAC<br/>/auth/*]
+        AUTH[Auth + RBAC<br/>auth routes]
         DOMAIN[Cloud + Intelligence + Monitoring<br/>Cost + K8s + Remediation]
-        HCHAT[Header Assistant Path<br/>/chatbot/chat/enhanced]
-        OROUTES[ODAOS Path<br/>/odaos/chat/stream<br/>/odaos/prompts/:prompt_id/execute]
+        HCHAT[Header Assistant Path<br/>chatbot chat enhanced]
+        OROUTES[ODAOS Path<br/>chat stream and prompt execute]
         BRIDGE[odaos_bridge + odaos_core services]
         PRIMARY[create_llm provider factory]
         FALLBACK[genai_service fallback]
@@ -484,9 +484,9 @@ export const useHealthMatrix = (compartmentId: string) => {
 
 ```mermaid
 flowchart LR
-    API[API Routers (/api/v1/*)] --> CHAT[chatbot endpoints]
+    API[API Routers api-v1] --> CHAT[chatbot endpoints]
     API --> ODAOSR[odaos endpoints]
-    API --> CORE[cloud/intelligence/monitoring/cost/k8s/remediation]
+    API --> CORE[core domain endpoints]
 
     CHAT --> CS[ChatbotService]
     CS --> OCICTX[OCI context enrichment + cache]
@@ -499,7 +499,7 @@ flowchart LR
     BR --> OVIZ[VizService]
     BR --> OSESSION[SessionService]
     OCHAT --> ORCH[Orchestrator + agents]
-    ORCH --> DBTOOLS[Live DB/OCI tools]
+    ORCH --> DBTOOLS[Live DB and OCI tools]
     ORCH --> OLLM[Configured LLM provider]
 
     CORE --> OCISVC[cloud_service + intelligence_service]
